@@ -1,5 +1,223 @@
-@import "tailwindcss";
+.danmaku-input-container,
+.danmaku-style-popup,
+.danmaku-style-button,
+.danmaku-style-menu,
+.style-option,
+.danmaku-input,
+.danmaku-comment-button {
+    box-sizing: border-box;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 14px;
+    outline: none;
+}
 
-.your-class {
-    color: aliceblue;
+.danmaku-input-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+}
+
+.danmaku-style-popup {
+    position: relative;
+}
+
+.danmaku-style-button {
+    background: var(--yt-spec-base-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 18px;
+    padding: 8px 18px;
+    cursor: pointer;
+    color: var(--yt-spec-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.danmaku-style-button.open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.chevron-icon {
+    transition: transform 0.2s ease;
+}
+
+.danmaku-style-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--yt-spec-raised-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    z-index: 1000;
+    padding: 1em;
+    width: 100%;
+}
+
+.style-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.style-option:hover {
+    background-color: var(--yt-spec-10-percent-layer);
+}
+
+.style-option-bold {
+    font-weight: bold;
+}
+
+.style-option-large {
+    font-size: 18px;
+}
+
+.style-option-red {
+    color: #ff4444;
+}
+
+.style-option-green {
+    color: #44ff44;
+}
+
+.style-option-blue {
+    color: #4444ff;
+}
+
+.style-option.selected-color {
+    background-color: var(--yt-spec-10-percent-layer);
+    border: 2px solid var(--yt-spec-call-to-action);
+    box-shadow: 0 0 4px rgba(0, 122, 255, 0.3);
+}
+
+.style-option.selected-color:hover {
+    background-color: var(--yt-spec-10-percent-layer);
+}
+
+.iridescent-effect-3 {
+    background: radial-gradient(
+        circle at 20% 80%,
+        #e6e6fa 5%,
+        #add8e6 15%,
+        #90ee90 25%,
+        #ffe4e1 35%,
+        #d8bfd8 45%,
+        #e6e6fa 55%
+    );
+    background-size: 200% 200%;
+    animation: moveGradient 5s infinite alternate;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@keyframes moveGradient {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+.iridescent-effect-4 {
+    background-color: #333;
+    background-image: linear-gradient(45deg, #00f, #f0f),
+        linear-gradient(-45deg, #0f0, #ff0);
+    background-size: 150% 150%;
+    background-position: 0% 0%;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+    animation: animateIridescence 10s infinite alternate;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@keyframes animateIridescence {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+.danmaku-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px solid var(--yt-spec-10-percent-layer);
+    background: transparent;
+    color: var(--yt-spec-text-primary);
+    transition: border-bottom-color 0.2s;
+}
+
+.danmaku-input:focus {
+    border-bottom-color: var(--yt-spec-call-to-action);
+}
+
+.danmaku-comment-button {
+    background: var(
+        --yt-spec-call-to-action,
+        var(--yt-spec-themed-blue, #3ea6ff)
+    );
+    color: var(--yt-spec-text-primary-inverse, #fff);
+    border: none;
+    border-radius: 18px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.danmaku-comment-button:hover {
+    background-color: var(
+        --yt-spec-call-to-action-hover,
+        var(--yt-spec-themed-blue, #3ea6ff)
+    );
+}
+
+.danmaku-comment-button:active {
+    background-color: var(
+        --yt-spec-call-to-action-active,
+        var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4))
+    );
+}
+
+.danmaku-comment-button:disabled {
+    color: #717171;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: not-allowed;
+}
+
+.danmaku-style-button.open {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #007bff;
+    visibility: visible;
+}
+
+.danmaku-style-button.open .chevron-icon {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+
+.danmaku-style-menu {
+    display: none !important;
+}
+
+.danmaku-style-menu.open {
+    display: block !important;
 }
