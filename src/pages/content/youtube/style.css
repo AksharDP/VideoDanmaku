@@ -162,7 +162,7 @@
     z-index: 3;
 }
 
-.custom-color-picker-wrapper .lucide-pipette-icon {
+.custom-color-picker-wrapper {
     position: relative;
     z-index: 2;
     pointer-events: none;
