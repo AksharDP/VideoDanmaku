@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "name in manifest.json",
-  "description": "description in manifest.json",
+  "name": "VideoDanmaku",
+  "description": "A simple extension for adding danmaku to YouTube videos.",
   "action": {
     "default_icon": {
       "32": "icon-32.png"
@@ -11,7 +11,11 @@
     "128": "icon-128.png"
   },
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://danmaku.200069.xyz/*"
   ],
   "content_scripts": [
     {
@@ -31,9 +35,12 @@
       "resources": [
         "contentStyle.css",
         "icon-128.png",
-        "icon-32.png"
+        "icon-32.png",
+        "src/pages/login/index.html"
       ],
-      "matches": []
+      "matches": [
+        "https://www.youtube.com/*"
+      ]
     }
   ]
 }

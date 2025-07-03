@@ -1,0 +1,327 @@
+/* Universal container properties */
+.danmaku-input-container,
+.danmaku-style-popup,
+.danmaku-style-button,
+.danmaku-style-menu,
+.style-option,
+.danmaku-input,
+.danmaku-comment-button,
+.color-box,
+.position-option {
+    box-sizing: border-box;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 14px;
+    outline: none;
+}
+
+.danmaku-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+    background: var(--yt-spec-base-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 18px;
+    padding: 8px 12px;
+}
+
+.danmaku-style-popup {
+    position: relative;
+}
+
+.danmaku-style-button {
+    background: transparent;
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--yt-spec-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.danmaku-style-button.open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #007bff;
+    visibility: visible;
+}
+
+.danmaku-style-button.open .chevron-icon {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+
+.chevron-icon {
+    transition: transform 0.2s ease;
+}
+
+.danmaku-style-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--yt-spec-raised-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    display: none !important;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 1000;
+    padding: 1em;
+    width: 250px; /* Adjusted width to fit content */
+}
+
+.danmaku-style-menu.open {
+    display: flex !important;
+}
+
+.style-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.style-section-title {
+    font-weight: bold;
+    color: var(--yt-spec-text-primary);
+    margin-bottom: 5px;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 columns */
+    gap: 8px;
+}
+
+.color-box {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.1s ease-in-out;
+}
+
+.color-box:hover {
+    transform: scale(1.1);
+}
+
+.color-box.selected-color {
+    border: 2px solid var(--yt-spec-call-to-action);
+    box-shadow: 0 0 5px var(--yt-spec-call-to-action);
+}
+
+.hex-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#hex-color-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 4px;
+    background-color: var(--yt-spec-filled-background);
+    color: var(--yt-spec-text-primary);
+}
+
+#hex-color-input {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Remove default input[type="color"] styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+}
+
+#hex-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+#hex-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+#hex-color-input::-moz-color-swatch-wrapper {
+    padding: 0;
+}
+
+#hex-color-input::-moz-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+#hex-color-input.custom-color-selected {
+    border: 2px solid #007bff; /* Blue outline */
+    box-shadow: 0 0 5px rgba(0, 122, 255, 0.5); /* Optional: add a subtle glow */
+}
+
+.position-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.position-option {
+    background: transparent;
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--yt-spec-text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.position-option:hover {
+    background-color: var(--yt-spec-10-percent-layer);
+}
+
+.position-option.selected-position {
+    border-color: var(--yt-spec-call-to-action);
+    background-color: rgba(0, 122, 255, 0.1);
+}
+
+.danmaku-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--yt-spec-10-percent-layer);
+    transition: border-bottom-color 0.2s;
+}
+
+.danmaku-input-wrapper:focus-within {
+    border-bottom-color: var(--yt-spec-call-to-action);
+}
+
+.danmaku-comments-count {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--yt-spec-text-secondary);
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    opacity: 0.7;
+}
+
+.danmaku-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+    border: none;
+    background: transparent;
+    color: var(--yt-spec-text-primary);
+}
+
+.danmaku-login-prompt {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--yt-spec-text-secondary);
+}
+
+.danmaku-char-count {
+    font-size: 12px;
+    color: var(--yt-spec-text-secondary);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.danmaku-input.error {
+    border-bottom-color: var(--yt-spec-error-message, #ff4444) !important;
+}
+
+.danmaku-login-prompt .line {
+    flex-grow: 1;
+    height: 1px;
+    background-color: var(--yt-spec-10-percent-layer);
+}
+
+.danmaku-login-prompt .text {
+    white-space: nowrap;
+}
+
+.danmaku-comment-button {
+    background: var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #3ea6ff));
+    color: var(--yt-spec-text-primary-inverse, #fff);
+    border: none;
+    border-radius: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.danmaku-comment-button:hover {
+    background-color: var(--yt-spec-call-to-action-hover, var(--yt-spec-themed-blue, #3ea6ff));
+}
+
+.danmaku-comment-button:active {
+    background-color: var(--yt-spec-call-to-action-active, var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4)));
+}
+
+.danmaku-comment-button:disabled {
+    color: #717171;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: not-allowed;
+}
+
+/* Modal Styles */
+.danmaku-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.danmaku-modal-content {
+    position: relative;
+    width: 450px;
+    height: 600px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.danmaku-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.danmaku-modal-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}

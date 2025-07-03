@@ -7,13 +7,15 @@
     "type": "git",
     "url": "https://github.com/JohnBra/vite-web-extension.git"
   },
+  "API_BASE_URL": "https://danmaku.200069.xyz",
   "scripts": {
-    "build": "vite build --config vite.config.chrome.ts",
-    "build:chrome": "vite build --config vite.config.chrome.ts",
-    "build:firefox": "vite build --config vite.config.firefox.ts",
-    "dev": "nodemon --config nodemon.chrome.json",
-    "dev:chrome": "nodemon --config nodemon.chrome.json",
-    "dev:firefox": "nodemon --config nodemon.firefox.json"
+    "build": "bun run vite build --config vite.config.chrome.ts",
+    "build:chrome": "bun run vite build --config vite.config.chrome.ts",
+    "build:firefox": "bun run vite build --config vite.config.firefox.ts",
+    "dev": "bun run nodemon --config nodemon.chrome.json",
+    "dev:chrome": "bun run nodemon --config nodemon.chrome.json",
+    "dev:firefox": "bun run nodemon --config nodemon.firefox.json",
+    "install": "bun install"
   },
   "type": "module",
   "dependencies": {
