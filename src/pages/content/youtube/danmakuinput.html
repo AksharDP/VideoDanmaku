@@ -21,34 +21,153 @@
             <div class="style-section">
                 <div class="style-section-title">Color</div>
                 <div class="color-grid">
-                    <div class="color-box" data-color="#FF0000" style="background-color: #FF0000;"></div>
-                    <div class="color-box" data-color="#FFA500" style="background-color: #FFA500;"></div>
-                    <div class="color-box" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
-                    <div class="color-box" data-color="#008000" style="background-color: #008000;"></div>
-                    <div class="color-box" data-color="#0000FF" style="background-color: #0000FF;"></div>
-                    <div class="color-box" data-color="#4B0082" style="background-color: #4B0082;"></div>
-                    <div class="color-box" data-color="#EE82EE" style="background-color: #EE82EE;"></div>
-                    <div class="color-box" data-color="#FFC0CB" style="background-color: #FFC0CB;"></div>
-                    <div class="color-box" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
-                    <div class="color-box" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+                    <div
+                        class="color-box"
+                        data-color="#FF0000"
+                        style="background-color: #ff0000"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#FFA500"
+                        style="background-color: #ffa500"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#FFFF00"
+                        style="background-color: #ffff00"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#00FF00"
+                        style="background-color: #00ff00"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#00BFFF"
+                        style="background-color: #00bfff"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#4B0082"
+                        style="background-color: #4b0082"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#EE82EE"
+                        style="background-color: #ee82ee"
+                    ></div>
+                    <div
+                        class="color-box"
+                        data-color="#000000"
+                        style="background-color: #000000"
+                    ></div>
+                    <div
+                        class="color-box selected-color"
+                        data-color="#FFFFFF"
+                        style="background-color: #ffffff"
+                    ></div>
+                    <div class="custom-color-picker-wrapper color-box">
+                        <div
+                            id="hex-color-preview"
+                            class="custom-color-preview"
+                        ></div>
+                        <input type="color" id="native-color-picker" />
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-pipette-icon lucide-pipette"
+                        >
+                            <path
+                                d="m12 9-8.414 8.414A2 2 0 0 0 3 18.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 3.828 21h1.344a2 2 0 0 0 1.414-.586L15 12"
+                            />
+                            <path
+                                d="m18 9 .4.4a1 1 0 1 1-3 3l-3.8-3.8a1 1 0 1 1 3-3l.4.4 3.4-3.4a1 1 0 1 1 3 3z"
+                            />
+                            <path d="m2 22 .414-.414" />
+                        </svg>
+                    </div>
                 </div>
                 <div class="hex-input-group">
-                    <input type="text" id="hex-color-input" placeholder="#RRGGBB" maxlength="7">
-                    <div id="hex-color-preview" class="color-box" style="background-color: #ffffff;"></div>
-                    <input type="color" id="native-color-picker" style="display: none;">
+                    <input
+                        type="text"
+                        id="hex-color-input"
+                        placeholder="#000000"
+                    />
                 </div>
             </div>
             <div class="style-section">
                 <div class="style-section-title">Position</div>
                 <div class="position-selector">
-                    <button class="position-option" data-position="top" title="Top">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-top-icon lucide-panel-top"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg>
+                    <button
+                        class="position-option"
+                        data-position="top"
+                        title="Top"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-panel-top-icon lucide-panel-top"
+                        >
+                            <rect width="18" height="18" x="3" y="3" rx="2" />
+                            <path d="M3 9h18" />
+                        </svg>
                     </button>
-                    <button class="position-option selected-position" data-position="slide" title="Slide">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-horizontal-icon lucide-move-horizontal"><path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/></svg>
+                    <button
+                        class="position-option selected-position"
+                        data-position="slide"
+                        title="Slide"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-move-horizontal-icon lucide-move-horizontal"
+                        >
+                            <path d="m18 8 4 4-4 4" />
+                            <path d="M2 12h20" />
+                            <path d="m6 8-4 4 4 4" />
+                        </svg>
                     </button>
-                    <button class="position-option" data-position="bottom" title="Bottom">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-bottom-icon lucide-panel-bottom"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/></svg>
+                    <button
+                        class="position-option"
+                        data-position="bottom"
+                        title="Bottom"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-panel-bottom-icon lucide-panel-bottom"
+                        >
+                            <rect width="18" height="18" x="3" y="3" rx="2" />
+                            <path d="M3 15h18" />
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -69,12 +188,16 @@
         <div class="danmaku-comments-count">
             <span id="danmaku-comments-loaded">Loading comments...</span>
         </div>
-        <div id="danmaku-login-prompt" style="display: none;">
+        <div id="danmaku-login-prompt" style="display: none">
             <span class="line"></span>
             <span class="text">Login/Signup</span>
             <span class="line"></span>
         </div>
-        <div id="danmaku-char-count" class="danmaku-char-count" style="display: none;">
+        <div
+            id="danmaku-char-count"
+            class="danmaku-char-count"
+            style="display: none"
+        >
             <span id="current-char-count">0</span>/
         </div>
     </div>

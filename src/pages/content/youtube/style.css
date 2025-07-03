@@ -1,4 +1,3 @@
-/* Universal container properties */
 .danmaku-input-container,
 .danmaku-style-popup,
 .danmaku-style-button,
@@ -75,7 +74,7 @@
     gap: 15px;
     z-index: 1000;
     padding: 1em;
-    width: 250px; /* Adjusted width to fit content */
+    width: 250px;
 }
 
 .danmaku-style-menu.open {
@@ -96,7 +95,7 @@
 
 .color-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 columns */
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
 }
 
@@ -133,41 +132,47 @@
     color: var(--yt-spec-text-primary);
 }
 
-#hex-color-input {
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    /* Remove default input[type="color"] styling */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
+.custom-color-picker-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background-clip: padding-box;
+}
+
+.custom-color-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.custom-color-picker-wrapper input[type="color"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    border: none;
     padding: 0;
-    background: none;
     cursor: pointer;
+    z-index: 3;
 }
 
-#hex-color-input::-webkit-color-swatch-wrapper {
-    padding: 0;
+.custom-color-picker-wrapper .lucide-pipette-icon {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+    color: var(--yt-spec-text-primary);
 }
 
-#hex-color-input::-webkit-color-swatch {
-    border: none;
-    border-radius: 4px;
-}
-
-#hex-color-input::-moz-color-swatch-wrapper {
-    padding: 0;
-}
-
-#hex-color-input::-moz-color-swatch {
-    border: none;
-    border-radius: 4px;
-}
-
-#hex-color-input.custom-color-selected {
-    border: 2px solid #007bff; /* Blue outline */
-    box-shadow: 0 0 5px rgba(0, 122, 255, 0.5); /* Optional: add a subtle glow */
+.color-box.selected-color,
+.custom-color-picker-wrapper.selected-color {
+    border: 2px solid var(--yt-spec-call-to-action);
+    box-shadow: 0 0 5px var(--yt-spec-call-to-action);
 }
 
 .position-selector {
@@ -260,7 +265,10 @@
 }
 
 .danmaku-comment-button {
-    background: var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #3ea6ff));
+    background: var(
+        --yt-spec-call-to-action,
+        var(--yt-spec-themed-blue, #3ea6ff)
+    );
     color: var(--yt-spec-text-primary-inverse, #fff);
     border: none;
     border-radius: 12px;
@@ -271,11 +279,17 @@
 }
 
 .danmaku-comment-button:hover {
-    background-color: var(--yt-spec-call-to-action-hover, var(--yt-spec-themed-blue, #3ea6ff));
+    background-color: var(
+        --yt-spec-call-to-action-hover,
+        var(--yt-spec-themed-blue, #3ea6ff)
+    );
 }
 
 .danmaku-comment-button:active {
-    background-color: var(--yt-spec-call-to-action-active, var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4)));
+    background-color: var(
+        --yt-spec-call-to-action-active,
+        var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4))
+    );
 }
 
 .danmaku-comment-button:disabled {
@@ -284,7 +298,6 @@
     cursor: not-allowed;
 }
 
-/* Modal Styles */
 .danmaku-modal-overlay {
     position: fixed;
     top: 0;

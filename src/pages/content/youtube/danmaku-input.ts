@@ -13,35 +13,38 @@ export class DanmakuInput {
     private charCountContainer: HTMLElement;
     private currentCharCount: HTMLElement;
 
-    // New elements for style menu
     private colorBoxes: NodeListOf<HTMLElement>;
+    private hexColorInput: HTMLInputElement;
     private hexColorPreview: HTMLElement;
-    private nativeColorPicker: HTMLInputElement; // Added for native color picker
+    private nativeColorPicker: HTMLInputElement;
     private positionOptions: NodeListOf<HTMLElement>;
 
     private videoPlayer: HTMLVideoElement;
-    private danmaku: Danmaku; // Will be set to Danmaku instance if provided
-    private selectedColor = "#ffffff"; // Default color
-    private selectedPosition: "slide" | "top" | "bottom" = "slide"; // Default position
+    private danmaku: Danmaku;
+    private selectedColor = "#ffffff";
+    private selectedPosition: "slide" | "top" | "bottom" = "slide";
     private readonly MAX_CHARS = 350;
 
-    /**
-     * Optionally pass the Danmaku instance for local comment injection.
-     */
-    constructor(container: HTMLElement, videoPlayer: HTMLVideoElement, danmakuInstance: Danmaku) {
-        // Try to initialize comments count from the element if present
-        const commentsCountElement = document.getElementById("danmaku-comments-loaded");
+    constructor(
+        container: HTMLElement,
+        videoPlayer: HTMLVideoElement,
+        danmakuInstance: Danmaku
+    ) {
+        const commentsCountElement = document.getElementById(
+            "danmaku-comments-loaded"
+        );
         if (commentsCountElement) {
             const match = commentsCountElement.textContent?.match(/(\d+)/);
             if (match) {
                 this._commentsCount = parseInt(match[1], 10);
             }
         }
-        // Set up a listener to update the element whenever the count changes
         this.addCommentsCountListener((count) => {
             const el = document.getElementById("danmaku-comments-loaded");
             if (el) {
-                el.textContent = `${count} comment${count === 1 ? '' : 's'} loaded`;
+                el.textContent = `${count} comment${
+                    count === 1 ? "" : "s"
+                } loaded`;
             }
         });
 
@@ -50,22 +53,37 @@ export class DanmakuInput {
         this.danmaku = danmakuInstance;
 
         this.inputField = this.container.querySelector("#danmaku-input-field")!;
-        this.commentButton = this.container.querySelector(".danmaku-comment-button")!;
-        this.loginPrompt = this.container.querySelector("#danmaku-login-prompt")!;
-        this.styleButton = this.container.querySelector(".danmaku-style-button")!;
+        this.commentButton = this.container.querySelector(
+            ".danmaku-comment-button"
+        )!;
+        this.loginPrompt = this.container.querySelector(
+            "#danmaku-login-prompt"
+        )!;
+        this.styleButton = this.container.querySelector(
+            ".danmaku-style-button"
+        )!;
         this.styleMenu = this.container.querySelector(".danmaku-style-menu")!;
-        this.charCountContainer = this.container.querySelector("#danmaku-char-count")!;
-        this.currentCharCount = this.container.querySelector("#current-char-count")!;
+        this.charCountContainer = this.container.querySelector(
+            "#danmaku-char-count"
+        )!;
+        this.currentCharCount = this.container.querySelector(
+            "#current-char-count"
+        )!;
 
-        // Initialize new elements
         this.colorBoxes = this.styleMenu.querySelectorAll(".color-box");
         this.hexColorInput = this.styleMenu.querySelector("#hex-color-input")!;
-        this.positionOptions = this.styleMenu.querySelectorAll(".position-option");
+
+        this.hexColorPreview =
+            this.styleMenu.querySelector("#hex-color-preview")!;
+        this.nativeColorPicker = this.styleMenu.querySelector(
+            "#native-color-picker"
+        )!;
+        this.positionOptions =
+            this.styleMenu.querySelectorAll(".position-option");
 
         this.setupEventListeners();
         this.updateUIBasedOnAuth();
 
-        // Set initial selected color and position
         this.updateSelectedColorUI(this.selectedColor);
         this.updateSelectedPositionUI(this.selectedPosition);
 
@@ -88,7 +106,7 @@ export class DanmakuInput {
      */
     public set commentsCount(val: number) {
         this._commentsCount = val;
-        this.commentsCountListeners.forEach(fn => fn(val));
+        this.commentsCountListeners.forEach((fn) => fn(val));
     }
 
     /**
@@ -99,7 +117,9 @@ export class DanmakuInput {
     }
 
     private setupEventListeners() {
-        this.commentButton.addEventListener("click", () => this.handleCommentButtonClick());
+        this.commentButton.addEventListener("click", () =>
+            this.handleCommentButtonClick()
+        );
         this.loginPrompt.addEventListener("click", () => this.openLoginPage());
         this.inputField.addEventListener("input", () => this.handleInput());
 
@@ -110,19 +130,20 @@ export class DanmakuInput {
         });
 
         document.addEventListener("click", (e) => {
-            if (!this.styleMenu.contains(e.target as Node) && e.target !== this.styleButton) {
+            if (
+                !this.styleMenu.contains(e.target as Node) &&
+                e.target !== this.styleButton
+            ) {
                 this.styleMenu.classList.remove("open");
                 this.styleButton.classList.remove("open");
             }
         });
 
-        // Prevent clicks inside the style menu from closing it
         this.styleMenu.addEventListener("click", (e) => {
             e.stopPropagation();
         });
 
-        // Color selection
-        this.colorBoxes.forEach(box => {
+        this.colorBoxes.forEach((box) => {
             box.addEventListener("click", () => {
                 this.selectedColor = box.dataset.color || "#ffffff";
                 this.updateSelectedColorUI(this.selectedColor);
@@ -138,16 +159,14 @@ export class DanmakuInput {
                 this.nativeColorPicker.value = hex;
                 this.updateSelectedColorUI(hex);
             } else {
-                this.hexColorPreview.style.backgroundColor = "#ffffff"; // Reset preview on invalid input
+                this.hexColorPreview.style.backgroundColor = "#ffffff";
             }
         });
 
-        // Trigger native color picker on preview click
         this.hexColorPreview.addEventListener("click", () => {
             this.nativeColorPicker.click();
         });
 
-        // Update selected color when native color picker changes
         this.nativeColorPicker.addEventListener("input", () => {
             const hex = this.nativeColorPicker.value;
             this.selectedColor = hex;
@@ -156,10 +175,12 @@ export class DanmakuInput {
             this.updateSelectedColorUI(hex);
         });
 
-        // Position selection
-        this.positionOptions.forEach(option => {
+        this.positionOptions.forEach((option) => {
             option.addEventListener("click", () => {
-                const position = option.dataset.position as "slide" | "top" | "bottom";
+                const position = option.dataset.position as
+                    | "slide"
+                    | "top"
+                    | "bottom";
                 this.selectedPosition = position;
                 this.updateSelectedPositionUI(position);
             });
@@ -167,19 +188,27 @@ export class DanmakuInput {
     }
 
     private updateSelectedColorUI(color: string) {
-        this.colorBoxes.forEach(box => box.classList.remove('selected-color'));
-        const selectedBox = Array.from(this.colorBoxes).find(box => box.dataset.color === color);
+        this.colorBoxes.forEach((box) =>
+            box.classList.remove("selected-color")
+        );
+        const selectedBox = Array.from(this.colorBoxes).find(
+            (box) => box.dataset.color === color
+        );
         if (selectedBox) {
-            selectedBox.classList.add('selected-color');
+            selectedBox.classList.add("selected-color");
         }
         this.hexColorPreview.style.backgroundColor = color;
     }
 
     private updateSelectedPositionUI(position: "slide" | "top" | "bottom") {
-        this.positionOptions.forEach(option => option.classList.remove('selected-position'));
-        const selectedOption = Array.from(this.positionOptions).find(option => option.dataset.position === position);
+        this.positionOptions.forEach((option) =>
+            option.classList.remove("selected-position")
+        );
+        const selectedOption = Array.from(this.positionOptions).find(
+            (option) => option.dataset.position === position
+        );
         if (selectedOption) {
-            selectedOption.classList.add('selected-position');
+            selectedOption.classList.add("selected-position");
         }
     }
 
@@ -201,7 +230,9 @@ export class DanmakuInput {
                     this.charCountContainer.removeChild(node);
                 }
             });
-            this.charCountContainer.appendChild(document.createTextNode(maxCountText));
+            this.charCountContainer.appendChild(
+                document.createTextNode(maxCountText)
+            );
         }
 
         if (charCount > this.MAX_CHARS) {
@@ -228,10 +259,19 @@ export class DanmakuInput {
         if (!text) return;
 
         const platform = "youtube";
-        const videoId = new URLSearchParams(window.location.search).get("v") || "unknown";
+        const videoId =
+            new URLSearchParams(window.location.search).get("v") || "unknown";
         const time = this.videoPlayer.currentTime;
 
-        const success = await postComment(platform, videoId, time, text, this.selectedColor, this.selectedPosition, "normal");
+        const success = await postComment(
+            platform,
+            videoId,
+            time,
+            text,
+            this.selectedColor,
+            this.selectedPosition,
+            "normal"
+        );
 
         if (success) {
             const localComment: Comment = {
@@ -256,7 +296,7 @@ export class DanmakuInput {
     }
 
     private openLoginPage() {
-        const event = new CustomEvent('danmaku-open-login');
+        const event = new CustomEvent("danmaku-open-login");
         document.dispatchEvent(event);
     }
 
