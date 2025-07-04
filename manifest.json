@@ -30,7 +30,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "contentStyle.css"
+        "contentStyle.css",
+        "src/pages/content/login-modal/login-modal.html"
       ],
       "matches": [
         "https://www.youtube.com/*"

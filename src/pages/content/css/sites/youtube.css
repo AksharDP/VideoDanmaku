@@ -64,10 +64,12 @@
 
 .danmaku-input-wrapper {
     border-bottom: 1px solid var(--yt-spec-10-percent-layer);
+    transition: border-bottom-color 0.2s;
+    position: relative;
 }
 
 .danmaku-input-wrapper:focus-within {
-    border-bottom-color: var(--yt-spec-call-to-action);
+    border-bottom-color: #3ea6ff;
 }
 
 .danmaku-input {
@@ -87,11 +89,35 @@
 }
 
 .danmaku-login-prompt {
-    color: var(--yt-spec-text-secondary);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 8px;
+    gap: 8px;
+    cursor: pointer;
 }
 
 .danmaku-login-prompt .line {
-    background-color: var(--yt-spec-10-percent-layer);
+    flex-grow: 1;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.danmaku-login-prompt .text {
+    white-space: nowrap;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.danmaku-login-prompt:hover .text {
+    color: #fff;
+    text-decoration: underline;
 }
 
 .danmaku-comment-button {

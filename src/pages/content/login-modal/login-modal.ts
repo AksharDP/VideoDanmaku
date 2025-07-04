@@ -16,7 +16,9 @@ export class LoginModal {
         if (document.getElementById("danmaku-login-modal")) return;
 
         this.createModal();
-        this.setupEventListeners();
+        this.loadAndAppendForm().then(() => {
+            this.setupEventListeners();
+        });
     }
 
     private createModal(): void {
@@ -32,72 +34,37 @@ export class LoginModal {
         closeButton.innerHTML = "&times;";
         closeButton.onclick = this.closeModal;
 
-        const loginForm = document.createElement("div");
-        loginForm.className = "danmaku-login-form";
-        loginForm.innerHTML = `
-            <h2 id="danmaku-modal-title">Welcome</h2>
-            
-            <!-- Login Mode Fields -->
-            <div id="danmaku-login-mode" class="danmaku-mode-section">
-                <div class="danmaku-form-group">
-                    <input type="text" id="danmaku-email-username" placeholder="Enter email or username" required>
-                    <div class="danmaku-field-error" id="danmaku-email-username-error"></div>
-                </div>
-                <div class="danmaku-form-group">
-                    <input type="password" id="danmaku-password" placeholder="Password" required>
-                    <div class="danmaku-field-error" id="danmaku-password-error"></div>
-                </div>
-                <div class="danmaku-checkbox-group">
-                    <label class="danmaku-checkbox-label">
-                        <input type="checkbox" id="danmaku-remember-me" class="danmaku-checkbox">
-                        <span class="danmaku-checkbox-text">Remember me</span>
-                    </label>
-                </div>
-                <button type="button" id="danmaku-login-btn" class="danmaku-primary-btn">Login</button>
-                
-                <div class="danmaku-divider">
-                    <span>OR</span>
-                </div>
-                
-                <button type="button" id="danmaku-switch-to-signup" class="danmaku-secondary-btn">Sign Up</button>
-            </div>
-            
-            <!-- Signup Mode Fields -->
-            <div id="danmaku-signup-mode" class="danmaku-mode-section" style="display: none;">
-                <div class="danmaku-form-group">
-                    <input type="email" id="danmaku-signup-email" placeholder="Email" required>
-                    <div class="danmaku-field-error" id="danmaku-signup-email-error"></div>
-                </div>
-                <div class="danmaku-form-group">
-                    <input type="text" id="danmaku-username" placeholder="Username" required>
-                    <div class="danmaku-field-error" id="danmaku-username-error"></div>
-                </div>
-                <div class="danmaku-form-group">
-                    <input type="password" id="danmaku-signup-password" placeholder="Password" required>
-                    <div class="danmaku-field-error" id="danmaku-signup-password-error"></div>
-                </div>
-                <div class="danmaku-form-group">
-                    <input type="password" id="danmaku-confirm-password" placeholder="Confirm Password" required>
-                    <div class="danmaku-field-error" id="danmaku-confirm-password-error"></div>
-                </div>
-                <button type="button" id="danmaku-signup-btn" class="danmaku-primary-btn">Create Account</button>
-                
-                <div class="danmaku-divider">
-                    <span>OR</span>
-                </div>
-                
-                <button type="button" id="danmaku-switch-to-login" class="danmaku-secondary-btn">Login</button>
-            </div>
-            
-            <div id="danmaku-login-error" class="danmaku-error" style="display: none;"></div>
-        `;
-
         modalContent.appendChild(closeButton);
-        modalContent.appendChild(loginForm);
         modalOverlay.appendChild(modalContent);
         document.body.appendChild(modalOverlay);
 
         this.modalElement = modalOverlay;
+
+        this.modalElement.addEventListener("mousedown", (event) => {
+            if (event.target === this.modalElement) {
+                this.closeModal();
+            }
+        });
+    }
+
+    private async loadAndAppendForm(): Promise<void> {
+        try {
+            const response = await fetch(chrome.runtime.getURL('src/pages/content/login-modal/login-modal.html'));
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const html = await response.text();
+            const modalContent = this.modalElement?.querySelector('.danmaku-modal-content');
+            if (modalContent) {
+                const loginForm = document.createElement("div");
+                loginForm.className = "danmaku-login-form";
+                loginForm.innerHTML = html;
+                modalContent.appendChild(loginForm);
+            }
+        } catch (error) {
+            console.error("Failed to load login form HTML:", error);
+            // Optionally, display an error message to the user
+        }
     }
 
     private setupEventListeners(): void {

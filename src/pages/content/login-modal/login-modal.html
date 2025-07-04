@@ -1,0 +1,55 @@
+<h2 id="danmaku-modal-title">Welcome</h2>
+
+<!-- Login Mode Fields -->
+<div id="danmaku-login-mode" class="danmaku-mode-section">
+    <div class="danmaku-form-group">
+        <input type="text" id="danmaku-email-username" placeholder="Enter email or username" required>
+        <div class="danmaku-field-error" id="danmaku-email-username-error"></div>
+    </div>
+    <div class="danmaku-form-group">
+        <input type="password" id="danmaku-password" placeholder="Password" required>
+        <div class="danmaku-field-error" id="danmaku-password-error"></div>
+    </div>
+    <div class="danmaku-checkbox-group">
+        <label class="danmaku-checkbox-label">
+            <input type="checkbox" id="danmaku-remember-me" class="danmaku-checkbox">
+            <span class="danmaku-checkbox-text">Remember me</span>
+        </label>
+    </div>
+    <button type="button" id="danmaku-login-btn" class="danmaku-primary-btn">Login</button>
+    
+    <div class="danmaku-divider">
+        <span>OR</span>
+    </div>
+    
+    <button type="button" id="danmaku-switch-to-signup" class="danmaku-secondary-btn">Sign Up</button>
+</div>
+
+<!-- Signup Mode Fields -->
+<div id="danmaku-signup-mode" class="danmaku-mode-section" style="display: none;">
+    <div class="danmaku-form-group">
+        <input type="email" id="danmaku-signup-email" placeholder="Email" required>
+        <div class="danmaku-field-error" id="danmaku-signup-email-error"></div>
+    </div>
+    <div class="danmaku-form-group">
+        <input type="text" id="danmaku-username" placeholder="Username" required>
+        <div class="danmaku-field-error" id="danmaku-username-error"></div>
+    </div>
+    <div class="danmaku-form-group">
+        <input type="password" id="danmaku-signup-password" placeholder="Password" required>
+        <div class="danmaku-field-error" id="danmaku-signup-password-error"></div>
+    </div>
+    <div class="danmaku-form-group">
+        <input type="password" id="danmaku-confirm-password" placeholder="Confirm Password" required>
+        <div class="danmaku-field-error" id="danmaku-confirm-password-error"></div>
+    </div>
+    <button type="button" id="danmaku-signup-btn" class="danmaku-primary-btn">Create Account</button>
+    
+    <div class="danmaku-divider">
+        <span>OR</span>
+    </div>
+    
+    <button type="button" id="danmaku-switch-to-login" class="danmaku-secondary-btn">Login</button>
+</div>
+
+<div id="danmaku-login-error" class="danmaku-error" style="display: none;"></div>

@@ -303,16 +303,16 @@ export class DanmakuInput {
             });
         });
 
+        const isInputWrapperVisible = !token;
+        this.inputField.style.visibility = isInputWrapperVisible ? 'hidden' : 'visible';
+        this.loginPrompt.style.display = isInputWrapperVisible ? 'flex' : 'none';
+
         if (token) {
             this.inputField.disabled = false;
-            this.commentButton.disabled = false;
-            this.commentButton.textContent = "Comment";
-            this.loginPrompt.style.display = "none";
+            this.commentButton.disabled = this.inputField.value.length > this.MAX_CHARS;
         } else {
             this.inputField.disabled = true;
             this.commentButton.disabled = true;
-            this.commentButton.textContent = "Comment";
-            this.loginPrompt.style.display = "flex";
         }
     }
 }
