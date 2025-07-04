@@ -14,9 +14,7 @@ export class DanmakuInput {
     private currentCharCount: HTMLElement;
 
     private colorBoxes: NodeListOf<HTMLElement>;
-    private hexColorInput: HTMLInputElement;
-    private hexColorPreview: HTMLElement;
-    private nativeColorPicker: HTMLInputElement;
+    private customColorPicker: HTMLInputElement;
     private positionOptions: NodeListOf<HTMLElement>;
 
     private videoPlayer: HTMLVideoElement;
@@ -70,14 +68,11 @@ export class DanmakuInput {
             "#current-char-count"
         )!;
 
-        this.colorBoxes = this.styleMenu.querySelectorAll(".color-box");
-        this.hexColorInput = this.styleMenu.querySelector("#hex-color-input")!;
+        this.colorBoxes = this.styleMenu.querySelectorAll(".color-box:not(#custom-color-picker)");
 
-        this.hexColorPreview =
-            this.styleMenu.querySelector("#hex-color-preview")!;
-        this.nativeColorPicker = this.styleMenu.querySelector(
-            "#native-color-picker"
-        )!;
+        this.customColorPicker = this.styleMenu.querySelector(
+            "#custom-color-picker"
+        )!;;
         this.positionOptions =
             this.styleMenu.querySelectorAll(".position-option");
 
@@ -147,32 +142,17 @@ export class DanmakuInput {
             box.addEventListener("click", () => {
                 this.selectedColor = box.dataset.color || "#ffffff";
                 this.updateSelectedColorUI(this.selectedColor);
-                this.hexColorInput.value = this.selectedColor;
             });
         });
-
-        this.hexColorInput.addEventListener("input", () => {
-            const hex = this.hexColorInput.value;
-            if (/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(hex)) {
-                this.selectedColor = hex;
-                this.hexColorPreview.style.backgroundColor = hex;
-                this.nativeColorPicker.value = hex;
-                this.updateSelectedColorUI(hex);
-            } else {
-                this.hexColorPreview.style.backgroundColor = "#ffffff";
-            }
+        // When the user clicks on the color input
+        this.customColorPicker.addEventListener("click", () => {
+            this.selectedColor = this.customColorPicker.value;
+            this.updateSelectedColorUI(this.customColorPicker.value);
         });
-
-        this.hexColorPreview.addEventListener("click", () => {
-            this.nativeColorPicker.click();
-        });
-
-        this.nativeColorPicker.addEventListener("input", () => {
-            const hex = this.nativeColorPicker.value;
-            this.selectedColor = hex;
-            this.hexColorInput.value = hex;
-            this.hexColorPreview.style.backgroundColor = hex;
-            this.updateSelectedColorUI(hex);
+        // when the user changes the color in the input
+        this.customColorPicker.addEventListener("input", () => {
+            this.selectedColor = this.customColorPicker.value;
+            this.updateSelectedColorUI(this.customColorPicker.value);
         });
 
         this.positionOptions.forEach((option) => {
@@ -188,16 +168,25 @@ export class DanmakuInput {
     }
 
     private updateSelectedColorUI(color: string) {
+        // Remove selected class from all color boxes
         this.colorBoxes.forEach((box) =>
             box.classList.remove("selected-color")
         );
+        this.customColorPicker.classList.remove("selected-color");
+        
+        // Check if the color matches any predefined color box
         const selectedBox = Array.from(this.colorBoxes).find(
             (box) => box.dataset.color === color
         );
+        
         if (selectedBox) {
+            // Select the predefined color box
             selectedBox.classList.add("selected-color");
+        } else {
+            // Select the custom color picker and update its value
+            this.customColorPicker.classList.add("selected-color");
+            this.customColorPicker.value = color;
         }
-        this.hexColorPreview.style.backgroundColor = color;
     }
 
     private updateSelectedPositionUI(position: "slide" | "top" | "bottom") {

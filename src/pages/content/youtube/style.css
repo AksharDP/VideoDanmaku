@@ -1,3 +1,8 @@
+/* Global font family */
+* {
+    font-family: Roboto, Arial, sans-serif;
+}
+
 .danmaku-input-container,
 .danmaku-style-popup,
 .danmaku-style-button,
@@ -105,16 +110,44 @@
     border-radius: 4px;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: transform 0.1s ease-in-out;
 }
 
-.color-box:hover {
-    transform: scale(1.1);
-}
-
-.color-box.selected-color {
+.selected-color {
     border: 2px solid var(--yt-spec-call-to-action);
     box-shadow: 0 0 5px var(--yt-spec-call-to-action);
+}
+
+#custom-color-picker {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+    overflow: hidden;
+}
+
+#custom-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border: none;
+}
+
+#custom-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+    width: 100%;
+    height: 100%;
+}
+
+#custom-color-picker::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+    width: 100%;
+    height: 100%;
 }
 
 .hex-input-group {
@@ -132,45 +165,7 @@
     color: var(--yt-spec-text-primary);
 }
 
-.custom-color-picker-wrapper {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    background-clip: padding-box;
-}
-
-.custom-color-preview {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
-
-.custom-color-picker-wrapper input[type="color"] {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    z-index: 3;
-}
-
-.custom-color-picker-wrapper {
-    position: relative;
-    z-index: 2;
-    pointer-events: none;
-    color: var(--yt-spec-text-primary);
-}
-
-.color-box.selected-color,
-.custom-color-picker-wrapper.selected-color {
+.color-box.selected-color {
     border: 2px solid var(--yt-spec-call-to-action);
     box-shadow: 0 0 5px var(--yt-spec-call-to-action);
 }
@@ -296,6 +291,48 @@
     color: #717171;
     background: rgba(255, 255, 255, 0.1);
     cursor: not-allowed;
+}
+
+/* Danmaku comment styles */
+.danmaku-comment {
+    position: absolute;
+    pointer-events: none;
+    white-space: nowrap;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 24px;
+    font-weight: normal;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+    line-height: 1;
+}
+
+.danmaku-comment.small {
+    font-size: 18px;
+}
+
+.danmaku-comment.normal {
+    font-size: 24px;
+}
+
+.danmaku-comment.large {
+    font-size: 30px;
+}
+
+.danmaku-comment.slide {
+    /* Sliding comments are positioned and moved via JavaScript */
+    transition: none;
+}
+
+.danmaku-comment.top {
+    text-align: center;
+    left: 50% !important;
+    transform: translateX(-50%);
+}
+
+.danmaku-comment.bottom {
+    text-align: center;
+    left: 50% !important;
+    transform: translateX(-50%);
 }
 
 .danmaku-modal-overlay {

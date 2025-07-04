@@ -1,3 +1,8 @@
+/* Global font family */
+* {
+    font-family: Roboto, Arial, sans-serif;
+}
+
 .danmaku-input-container,
 .danmaku-style-popup,
 .danmaku-style-button,
@@ -97,10 +102,6 @@
     background-color: var(--yt-spec-10-percent-layer);
     border: 2px solid var(--yt-spec-call-to-action);
     box-shadow: 0 0 4px rgba(0, 122, 255, 0.3);
-}
-
-.style-option.selected-color:hover {
-    background-color: var(--yt-spec-10-percent-layer);
 }
 
 .iridescent-effect-3 {
