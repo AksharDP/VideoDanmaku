@@ -18,6 +18,7 @@ export interface SiteAdapter {
     getTitle(): Promise<Element | null>;
     setupEventListeners(): Promise<void>;
     initializeDanmaku(): Promise<void>;
+    destroy(): void;
 }
 
 export class YouTubeAdapter implements SiteAdapter {
@@ -1115,5 +1116,25 @@ export class YouTubeAdapter implements SiteAdapter {
             white: "#ffffff",
         };
         return colorMap[color] || "#ffffff";
+    }
+
+    destroy(): void {
+        if (this.danmaku) {
+            this.danmaku.stop();
+            this.danmaku = null;
+        }
+
+        const danmakuContainer = document.querySelector(
+            ".danmaku-input-container"
+        );
+        if (danmakuContainer) {
+            danmakuContainer.remove();
+        }
+
+        // Remove event listeners if they were added to specific elements
+        // that are not removed with the danmakuContainer
+        document.removeEventListener("danmaku-open-login", () => {
+            this.createLoginModal();
+        });
     }
 }

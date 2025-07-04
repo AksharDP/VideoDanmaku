@@ -35,8 +35,7 @@
       "resources": [
         "contentStyle.css",
         "icon-128.png",
-        "icon-32.png",
-        "src/pages/login/index.html"
+        "icon-32.png"
       ],
       "matches": [
         "https://www.youtube.com/*"
