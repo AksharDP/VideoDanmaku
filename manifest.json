@@ -14,9 +14,6 @@
     "activeTab",
     "storage"
   ],
-  "host_permissions": [
-    "https://danmaku.200069.xyz/*"
-  ],
   "content_scripts": [
     {
       "matches": [

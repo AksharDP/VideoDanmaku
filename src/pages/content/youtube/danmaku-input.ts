@@ -165,6 +165,13 @@ export class DanmakuInput {
                 this.updateSelectedPositionUI(position);
             });
         });
+
+        this.inputField.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                this.handleCommentButtonClick();
+            }
+        });
     }
 
     private updateSelectedColorUI(color: string) {
