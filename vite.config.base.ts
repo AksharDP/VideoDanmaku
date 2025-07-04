@@ -35,7 +35,7 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
     react(),
-    stripDevIcons(isDev),
+    
     crxI18n({ localize, src: './src/locales' }),
   ],
   publicDir: resolve(__dirname, 'public'),

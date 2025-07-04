@@ -1,4 +1,4 @@
-import "./style.css";
+import "../css/sites/youtube.css";
 import danmakuHtml from "./danmakuinput.html?raw";
 import { DanmakuInput } from "./danmaku-input";
 import {

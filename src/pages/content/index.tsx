@@ -1,4 +1,5 @@
-import "./style.css";
+import "./css/danmaku-base.css";
+import "./css/login-modal.css";
 import { YouTubeAdapter } from "./youtube/youtube";
 
 function loadRobotoFont() {

@@ -132,7 +132,7 @@
 }
 
 .danmaku-checkbox:checked::after {
-    content: '✓';
+    content: "✓";
     position: absolute;
     top: 50%;
     left: 50%;
@@ -197,7 +197,7 @@
 
 .danmaku-divider::before,
 .danmaku-divider::after {
-    content: '';
+    content: "";
     flex: 1;
     height: 1px;
     background: #333;

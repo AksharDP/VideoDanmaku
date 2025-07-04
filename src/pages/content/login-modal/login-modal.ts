@@ -1,5 +1,5 @@
 import { login, signup, type LoginRequest, type SignupRequest } from "../api";
-import "./login-modal.css";
+import "../css/login-modal.css";
 
 export class LoginModal {
     private modalElement: HTMLElement | null = null;
