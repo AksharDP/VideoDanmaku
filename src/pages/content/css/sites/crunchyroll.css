@@ -1,0 +1,254 @@
+/* Crunchyroll-specific danmaku styles */
+.danmaku-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 1rem 0;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.danmaku-input-wrapper {
+    flex-grow: 1;
+    position: relative;
+}
+
+.danmaku-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.danmaku-input:focus {
+    outline: none;
+    border-color: #f78c6c;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(247, 140, 108, 0.2);
+}
+
+.danmaku-input::placeholder {
+    color: #999;
+}
+
+.danmaku-comment-button {
+    background: linear-gradient(135deg, #f78c6c 0%, #ff6b35 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 80px;
+}
+
+.danmaku-comment-button:hover {
+    background: linear-gradient(135deg, #ff6b35 0%, #f78c6c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(247, 140, 108, 0.3);
+}
+
+.danmaku-comment-button:active {
+    transform: translateY(0);
+}
+
+.danmaku-comment-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Style button and dropdown */
+.style-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.style-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #f78c6c;
+}
+
+.style-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    min-width: 200px;
+    padding: 8px;
+    margin-top: 4px;
+}
+
+.style-menu.hidden {
+    display: none;
+}
+
+/* Color selection */
+.color-selection {
+    margin-bottom: 12px;
+}
+
+.color-selection h4 {
+    color: #fff;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.color-boxes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.color-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.color-box.selected {
+    border-color: #f78c6c;
+    box-shadow: 0 0 0 2px rgba(247, 140, 108, 0.3);
+}
+
+.color-box:hover {
+    transform: scale(1.1);
+}
+
+/* Position selection */
+.position-selection {
+    margin-bottom: 12px;
+}
+
+.position-selection h4 {
+    color: #fff;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.position-options {
+    display: flex;
+    gap: 4px;
+}
+
+.position-option {
+    flex: 1;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.position-option.selected {
+    background: #f78c6c;
+    border-color: #f78c6c;
+}
+
+.position-option:hover {
+    background: rgba(247, 140, 108, 0.2);
+}
+
+/* Character count */
+.char-count-container {
+    margin-top: 8px;
+    text-align: right;
+}
+
+.char-count {
+    font-size: 11px;
+    color: #999;
+}
+
+.char-count.warning {
+    color: #f78c6c;
+}
+
+.char-count.error {
+    color: #ff4444;
+}
+
+/* Login prompt */
+.login-prompt {
+    background: rgba(247, 140, 108, 0.1);
+    border: 1px solid #f78c6c;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    color: #f78c6c;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.login-prompt:hover {
+    background: rgba(247, 140, 108, 0.2);
+}
+
+/* Comments loaded indicator */
+.comments-loaded {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .danmaku-input-container {
+        flex-direction: column;
+        gap: 8px;
+        margin: 0.5rem;
+        padding: 12px;
+    }
+
+    .danmaku-comment-button {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .style-menu {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 280px;
+    }
+}

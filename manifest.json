@@ -17,7 +17,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.youtube.com/watch?v=*"
+        "https://www.youtube.com/watch?v=*",
+        "https://www.crunchyroll.com/watch/*"
       ],
       "js": [
         "src/pages/content/index.tsx"
@@ -31,10 +32,12 @@
     {
       "resources": [
         "contentStyle.css",
-        "src/pages/content/login-modal/login-modal.html"
+        "src/pages/content/login-modal/login-modal.html",
+        "src/pages/content/danmaku/danmakuinput.html"
       ],
       "matches": [
-        "https://www.youtube.com/*"
+        "https://www.youtube.com/*",
+        "https://www.crunchyroll.com/*"
       ]
     }
   ]

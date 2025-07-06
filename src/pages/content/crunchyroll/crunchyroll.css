@@ -1,0 +1,89 @@
+/* Crunchyroll-specific styles for VideoDanmaku extension */
+
+/* Danmaku input container styling for Crunchyroll */
+.danmaku-input-container {
+    position: relative;
+    margin: 10px 0;
+    z-index: 1000;
+}
+
+/* Crunchyroll video player adjustments */
+.crunchyroll-video-player {
+    position: relative;
+}
+
+/* Danmaku overlay for Crunchyroll */
+.danmaku-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Danmaku comments styling for Crunchyroll */
+.danmaku-comment {
+    position: absolute;
+    white-space: nowrap;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    animation: danmaku-scroll 10s linear;
+    z-index: 101;
+}
+
+@keyframes danmaku-scroll {
+    0% {
+        transform: translateX(100%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+/* Crunchyroll-specific container adjustments */
+.crunchyroll-player-container .danmaku-input-container {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* Input field styling for Crunchyroll theme */
+.crunchyroll-player-container .danmaku-input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ff6b00;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #333;
+}
+
+.crunchyroll-player-container .danmaku-input:focus {
+    outline: none;
+    border-color: #ff8533;
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+}
+
+/* Submit button styling for Crunchyroll theme */
+.crunchyroll-player-container .danmaku-submit {
+    background: #ff6b00;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+.crunchyroll-player-container .danmaku-submit:hover {
+    background: #ff8533;
+}
+
+.crunchyroll-player-container .danmaku-submit:active {
+    background: #e55a00;
+}

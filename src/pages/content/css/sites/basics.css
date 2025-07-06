@@ -72,6 +72,9 @@
 
 .danmaku-input {
     color: #fff;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
 }
 
 .danmaku-input.error {
