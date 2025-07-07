@@ -84,6 +84,10 @@ export class DanmakuInput {
         }
     }
 
+    public updateVideoId(newVideoId: string): void {
+        this.videoId = newVideoId;
+    }
+
     private setupEventListeners() {
         this.commentButton.addEventListener("click", () => this.handleCommentButtonClick());
         this.loginPrompt.addEventListener("click", () => this.openLoginPage());

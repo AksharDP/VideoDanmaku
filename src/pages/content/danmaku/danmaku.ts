@@ -156,6 +156,22 @@ export class Danmaku {
         this.videoEventListeners = listeners;
     }
 
+    public reinitialize(videoPlayer: HTMLVideoElement): void {
+        console.log("Reinitializing Danmaku for new video player.");
+        this.pause();
+        this.clear();
+
+        // Remove old listeners
+        this.videoEventListeners.forEach(({ event, listener }) => {
+            this.videoPlayer.removeEventListener(event, listener);
+        });
+        this.videoEventListeners = [];
+
+        // Set new video player
+        this.videoPlayer = videoPlayer;
+        this.resize();
+    }
+
     public destroy(): void {
         console.log("Destroying Danmaku instance.");
         this.pause();
