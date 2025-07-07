@@ -8,6 +8,7 @@ interface DanmakuComment extends Comment {
     lane: number;
     expiry: number;
     element: HTMLElement;
+    isPaused?: boolean;
 }
 
 type VideoEventListener = {
@@ -39,6 +40,7 @@ export class Danmaku {
         this.videoPlayer = videoPlayer;
         this.container = container;
         this.resize();
+        this.addVideoEventListeners();
     }
 
     public getVideoPlayerInfo(): void {
@@ -117,6 +119,27 @@ export class Danmaku {
      */
     private resyncCommentQueue(): void {
         const currentTime = this.videoPlayer.currentTime;
+        
+        // Clear out any existing comments that are scheduled to appear
+        this.comments = [];
+
+        // Find comments that should be on screen
+        const onScreenComments = this.allComments.filter(comment => {
+            const hasStarted = comment.time <= currentTime;
+            const hasNotEnded = (comment.time + Danmaku.DURATION) > currentTime;
+            return hasStarted && hasNotEnded;
+        });
+
+        // Clear existing active comments to prevent duplicates
+        this.activeComments.forEach(c => c.element.remove());
+        this.activeComments = [];
+
+        // Emit on-screen comments at their correct positions
+        onScreenComments.forEach(comment => {
+            const timeElapsed = currentTime - comment.time;
+            this.emitComment(comment, timeElapsed);
+        });
+
         const startIndex = this.allComments.findIndex(comment => comment.time >= currentTime);
 
         this.comments = (startIndex === -1) ? [] : this.allComments.slice(startIndex);
@@ -170,6 +193,9 @@ export class Danmaku {
         // Set new video player
         this.videoPlayer = videoPlayer;
         this.resize();
+
+        // Add new listeners
+        this.addVideoEventListeners();
     }
 
     public destroy(): void {
@@ -188,6 +214,21 @@ export class Danmaku {
         this.comments = [];
         this.allComments = [];
         this.setCommentsCount = 0;
+    }
+
+    private addVideoEventListeners(): void {
+        const listeners: VideoEventListener[] = [
+            { event: "play", listener: () => this.play() },
+            { event: "pause", listener: () => this.pause() },
+            { event: "seeking", listener: () => this.seek() },
+            { event: "waiting", listener: () => this.pause() },
+            { event: "playing", listener: () => this.play() },
+        ];
+
+        listeners.forEach(({ event, listener }) => {
+            this.videoPlayer.addEventListener(event, listener);
+            this.videoEventListeners.push({ event, listener });
+        });
     }
 
     private animationLoop(timestamp: number): void {
@@ -211,13 +252,25 @@ export class Danmaku {
     private updateActiveComments(delta: number): void {
         const now = performance.now();
         this.activeComments = this.activeComments.filter((comment) => {
-            if (now > comment.expiry) {
-                comment.element.remove();
-                return false;
+            if (comment.isPaused) {
+                comment.expiry += delta * 1000;
             }
+
             if (comment.scrollMode === "slide") {
-                comment.x -= comment.speed * delta;
-                comment.element.style.transform = `translateX(${comment.x}px)`;
+                if (!comment.isPaused) {
+                    comment.x -= comment.speed * delta;
+                    comment.element.style.transform = `translateX(${comment.x}px)`;
+                }
+                // Remove if it's off-screen to the left
+                if (comment.x + comment.width < 0) {
+                    comment.element.remove();
+                    return false;
+                }
+            } else { // For top and bottom comments
+                if (now > comment.expiry) {
+                    comment.element.remove();
+                    return false;
+                }
             }
             return true;
         });
@@ -231,7 +284,7 @@ export class Danmaku {
         }
     }
 
-    private emitComment(comment: Comment): void {
+    private emitComment(comment: Comment, timeElapsed = 0): void {
         const danmakuElement = document.createElement("div");
         danmakuElement.textContent = comment.content;
         danmakuElement.classList.add("danmaku-comment");
@@ -255,13 +308,22 @@ export class Danmaku {
             lane,
             expiry: performance.now() + Danmaku.DURATION * 1000,
             element: danmakuElement,
+            isPaused: false,
         };
+
+        danmakuElement.addEventListener("mouseenter", () => {
+            danmakuComment.isPaused = true;
+        });
+        danmakuElement.addEventListener("mouseleave", () => {
+            danmakuComment.isPaused = false;
+        });
 
         switch (comment.scrollMode) {
             case "slide":
                 const containerWidth = this.container.offsetWidth;
-                danmakuComment.x = containerWidth;
                 danmakuComment.speed = (containerWidth + commentWidth) / Danmaku.DURATION;
+                const distanceTraveled = timeElapsed * danmakuComment.speed;
+                danmakuComment.x = containerWidth - distanceTraveled;
                 danmakuElement.style.top = `${danmakuComment.y}px`;
                 danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
                 this.slidingLanes[lane] = performance.now() + (commentWidth / danmakuComment.speed) * 1000;

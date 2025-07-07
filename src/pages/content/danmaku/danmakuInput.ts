@@ -172,11 +172,10 @@ export class DanmakuInput {
 
         if (this.charCountContainer) {
             const maxCountText = `/${this.MAX_CHARS}`;
-            const textNode = Array.from(this.charCountContainer.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-            if (textNode) {
-                this.charCountContainer.removeChild(textNode);
+            // Check if the max count text is already there
+            if (!this.charCountContainer.textContent?.includes(maxCountText)) {
+                this.charCountContainer.appendChild(document.createTextNode(maxCountText));
             }
-            this.charCountContainer.appendChild(document.createTextNode(maxCountText));
         }
 
         if (charCount > this.MAX_CHARS) {
@@ -220,6 +219,7 @@ export class DanmakuInput {
                 fontSize: "normal",
             };
             this.danmaku.addComment(localComment);
+            this.updateCommentsCount(this.danmaku.getCommentsCount);
             this.inputField.value = "";
             this.handleInput();
         } else {
