@@ -1,0 +1,30 @@
+/* c:\Users\dromus\Documents\code\VideoDanmaku\src\pages\content\css\danmaku-popup.css */
+.danmaku-comment-popup {
+    position: absolute;
+    bottom: -30px; /* Position it right below the comment */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+    padding: 5px;
+    display: none; /* Hidden by default */
+    z-index: 10;
+    gap: 5px;
+}
+
+.danmaku-comment:hover .danmaku-comment-popup {
+    display: flex; /* Show on hover of the parent comment */
+}
+
+.danmaku-popup-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.danmaku-popup-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: white;
+}

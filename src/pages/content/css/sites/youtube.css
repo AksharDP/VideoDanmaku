@@ -182,3 +182,45 @@
     height: 100%;
     border: none;
 }
+
+.danmaku-comment-popup {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--yt-spec-raised-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+.danmaku-popup-button {
+    background: transparent;
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    color: var(--yt-spec-text-primary);
+    border-radius: 4px;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.danmaku-popup-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--yt-spec-text-primary);
+}
+
+.danmaku-popup-button:hover {
+    background-color: var(--yt-spec-10-percent-layer);
+    border-color: var(--yt-spec-call-to-action);
+}
