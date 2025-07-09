@@ -1,0 +1,59 @@
+<h2 id="danmaku-report-modal-title">Report Comment</h2>
+
+<div class="danmaku-report-form">
+    <div class="danmaku-report-section">
+        <div class="danmaku-report-comment-preview">
+            <span id="danmaku-report-comment-text"></span>
+        </div>
+        <p class="danmaku-report-description">Please select a reason for reporting this comment:</p>
+        
+        <div class="danmaku-report-reasons">
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="spam" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Spam or misleading content</span>
+            </label>
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="harassment" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Harassment or bullying</span>
+            </label>
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="hate-speech" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Hate speech or discrimination</span>
+            </label>
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="inappropriate" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Inappropriate or explicit content</span>
+            </label>
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="violence" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Violence or threats</span>
+            </label>
+            <label class="danmaku-report-reason">
+                <input type="radio" name="report-reason" value="other" class="danmaku-report-radio">
+                <span class="danmaku-report-reason-text">Other</span>
+            </label>
+        </div>
+        
+        <div id="danmaku-report-other-section" class="danmaku-report-other-section" style="display: none;">
+            <div class="danmaku-form-group">
+                <textarea 
+                    id="danmaku-report-other-reason" 
+                    placeholder="Please provide additional details..."
+                    rows="3"
+                    maxlength="500"
+                ></textarea>
+                <div class="danmaku-field-error" id="danmaku-report-other-error"></div>
+                <div class="danmaku-char-limit">
+                    <span id="danmaku-report-char-count">0</span>/500
+                </div>
+            </div>
+        </div>
+        
+        <div class="danmaku-report-actions">
+            <button type="button" id="danmaku-report-cancel" class="danmaku-secondary-btn">Cancel</button>
+            <button type="button" id="danmaku-report-submit" class="danmaku-primary-btn" disabled>Report</button>
+        </div>
+    </div>
+</div>
+
+<div id="danmaku-report-error" class="danmaku-error" style="display: none;"></div>

@@ -224,3 +224,53 @@
     background-color: var(--yt-spec-10-percent-layer);
     border-color: var(--yt-spec-call-to-action);
 }
+
+/* Report modal specific styling for YouTube */
+.danmaku-report-form {
+    color: var(--yt-spec-text-primary);
+}
+
+.danmaku-report-comment-preview {
+    background: var(--yt-spec-base-background);
+    border: 1px solid var(--yt-spec-10-percent-layer);
+}
+
+.danmaku-report-comment-preview span {
+    color: var(--yt-spec-text-primary);
+}
+
+.danmaku-report-description {
+    color: var(--yt-spec-text-secondary);
+}
+
+.danmaku-report-reason:hover {
+    background: var(--yt-spec-10-percent-layer);
+}
+
+.danmaku-report-radio {
+    border-color: var(--yt-spec-10-percent-layer);
+    background: var(--yt-spec-base-background);
+}
+
+.danmaku-report-radio:checked {
+    border-color: var(--yt-spec-call-to-action);
+    background: var(--yt-spec-call-to-action);
+}
+
+.danmaku-report-reason-text {
+    color: var(--yt-spec-text-primary);
+}
+
+.danmaku-report-other-section textarea {
+    background: var(--yt-spec-base-background);
+    border-color: var(--yt-spec-10-percent-layer);
+    color: var(--yt-spec-text-primary);
+}
+
+.danmaku-report-other-section textarea:focus {
+    border-color: var(--yt-spec-call-to-action);
+}
+
+.danmaku-char-limit {
+    color: var(--yt-spec-text-secondary);
+}

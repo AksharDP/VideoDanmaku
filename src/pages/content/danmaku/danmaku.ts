@@ -1,4 +1,5 @@
 import { Comment } from "../api";
+import { ReportModal } from "../report-modal/report-modal";
 
 interface DanmakuComment extends Comment {
     y: number;
@@ -26,6 +27,7 @@ export class Danmaku {
     private lastTimestamp = 0;
     private animationFrameId: number | null = null;
     private videoEventListeners: VideoEventListener[] = [];
+    private reportModal: ReportModal;
 
     private commentsCount: number = 0;
 
@@ -39,6 +41,7 @@ export class Danmaku {
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
         this.container = container;
+        this.reportModal = new ReportModal();
         this.resize();
         this.addVideoEventListeners();
     }
@@ -313,7 +316,7 @@ export class Danmaku {
         reportButton.onclick = (e) => {
             e.stopPropagation();
             e.preventDefault();
-            // Add report functionality here if needed
+            this.reportModal.show(comment);
         };
         
         popup.appendChild(copyButton);

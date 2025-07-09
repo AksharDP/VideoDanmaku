@@ -1,0 +1,196 @@
+/* Report Modal Styles */
+.danmaku-report-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.danmaku-report-form h2 {
+    margin: 0 0 20px 0;
+    color: white;
+    text-align: center;
+    font-size: 24px;
+}
+
+.danmaku-report-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.danmaku-report-comment-preview {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.danmaku-report-comment-preview span {
+    color: #fff;
+    font-style: italic;
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.danmaku-report-description {
+    color: #ccc;
+    margin: 0;
+    font-size: 14px;
+}
+
+.danmaku-report-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.danmaku-report-reason {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.danmaku-report-reason:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.danmaku-report-radio {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #555;
+    border-radius: 50%;
+    background: #2a2a2a;
+    cursor: pointer;
+    appearance: none;
+    position: relative;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.danmaku-report-radio:checked {
+    border-color: #0066cc;
+    background: #0066cc;
+}
+
+.danmaku-report-radio:checked::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: white;
+}
+
+.danmaku-report-reason-text {
+    color: #fff;
+    font-size: 14px;
+    user-select: none;
+    line-height: 1.4;
+}
+
+.danmaku-report-other-section {
+    margin-top: 8px;
+}
+
+.danmaku-report-other-section .danmaku-form-group {
+    width: 100%;
+}
+
+.danmaku-report-other-section textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2a2a2a;
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box;
+}
+
+.danmaku-report-other-section textarea:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.danmaku-report-other-section textarea::placeholder {
+    color: #999;
+}
+
+.danmaku-char-limit {
+    text-align: right;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.danmaku-char-limit.warning {
+    color: #ff9500;
+}
+
+.danmaku-char-limit.error {
+    color: #ff4444;
+}
+
+.danmaku-report-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.danmaku-report-actions .danmaku-secondary-btn,
+.danmaku-report-actions .danmaku-primary-btn {
+    width: auto;
+    min-width: 80px;
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* Animation for showing/hiding other section */
+.danmaku-report-other-section {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.danmaku-report-other-section[style*="display: none"] {
+    max-height: 0;
+    opacity: 0;
+}
+
+.danmaku-report-other-section:not([style*="display: none"]) {
+    max-height: 200px;
+    opacity: 1;
+}
+
+/* Focus states */
+.danmaku-report-reason:focus-within {
+    background: rgba(255, 255, 255, 0.08);
+    outline: 1px solid #0066cc;
+    outline-offset: 1px;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .danmaku-report-actions {
+        flex-direction: column;
+    }
+    
+    .danmaku-report-actions .danmaku-secondary-btn,
+    .danmaku-report-actions .danmaku-primary-btn {
+        width: 100%;
+    }
+}

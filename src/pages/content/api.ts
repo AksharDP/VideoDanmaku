@@ -33,6 +33,18 @@ export interface AuthResponse {
     status?: number;
 }
 
+export interface ReportRequest {
+    commentId: number;
+    reason: string;
+    additionalDetails?: string;
+}
+
+export interface ReportResponse {
+    success: boolean;
+    error?: string;
+    message?: string;
+}
+
 export async function getComments(platform: string, videoId: string, commentLimit: number): Promise<Comment[]> {
     try {
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${commentLimit}`;
@@ -170,5 +182,52 @@ export async function signup(signupData: SignupRequest): Promise<AuthResponse> {
             success: false,
             error: "Network error. Please try again.",
         };
+    }
+}
+
+export async function reportComment(
+    commentId: number,
+    reason: string,
+    additionalDetails?: string
+): Promise<boolean> {
+    try {
+        const token = await new Promise<string | null>((resolve) => {
+            chrome.storage.local.get("authToken", (result) => {
+                resolve(result.authToken || null);
+            });
+        });
+
+        if (!token) {
+            console.error("No auth token found. Please login.");
+            return false;
+        }
+
+        const url = `${API_BASE_URL}/reportComment`;
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                commentId,
+                reason,
+                additionalDetails: additionalDetails || "",
+            }),
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.error("Authentication failed. Please login again.");
+                chrome.storage.local.remove("authToken");
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error("Failed to report comment:", error);
+        return false;
     }
 }
