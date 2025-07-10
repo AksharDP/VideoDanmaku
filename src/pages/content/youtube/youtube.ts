@@ -38,10 +38,11 @@ export class YouTubeAdapter implements SiteAdapter {
         const newVideoId = this.getVideoId(window.location.href);
 
         if (newVideoId && this.videoId !== newVideoId) {
-            console.log(`New video detected: ${newVideoId}. Initializing or re-initializing.`);
+            console.log(
+                `New video detected: ${newVideoId}. Initializing or re-initializing.`
+            );
             this.videoId = newVideoId;
 
-            // Always try to get the video player at the time of initialization
             this.videoPlayer = await this.waitForPlayer();
 
             if (!this.videoPlayer) {
@@ -50,14 +51,23 @@ export class YouTubeAdapter implements SiteAdapter {
             }
 
             if (!this.isInitialized) {
-                // First-time initialization
                 console.log("First-time initialization.");
                 this.danmakuContainer = document.createElement("div");
                 this.danmakuContainer.classList.add("danmaku-container");
-                this.videoPlayer.parentElement?.insertBefore(this.danmakuContainer, this.videoPlayer.nextSibling);
+                this.videoPlayer.parentElement?.insertBefore(
+                    this.danmakuContainer,
+                    this.videoPlayer.nextSibling
+                );
 
-                this.danmaku = new Danmaku(this.videoPlayer, this.danmakuContainer);
-                this.danmakuInputInstance = new DanmakuInput(this.danmaku, this.loginModal, this.videoId);
+                this.danmaku = new Danmaku(
+                    this.videoPlayer,
+                    this.danmakuContainer
+                );
+                this.danmakuInputInstance = new DanmakuInput(
+                    this.danmaku,
+                    this.loginModal,
+                    this.videoId
+                );
 
                 const danmakuInputElement = this.danmakuInputInstance.init();
                 await this.setupDanmakuInput(danmakuInputElement);
@@ -66,49 +76,56 @@ export class YouTubeAdapter implements SiteAdapter {
                 this.isInitialized = true;
                 console.log("Danmaku system initialized for the first time.");
             } else {
-                // Re-initialization for a new video
                 console.log("Re-initializing for new video.");
                 this.danmaku!.reinitialize(this.videoPlayer);
                 this.danmakuInputInstance!.updateVideoId(this.videoId);
 
-                // Re-attach the container if it was removed
-                if (this.danmakuContainer && !this.danmakuContainer.parentElement) {
-                    this.videoPlayer.parentElement?.insertBefore(this.danmakuContainer, this.videoPlayer.nextSibling);
+                if (
+                    this.danmakuContainer &&
+                    !this.danmakuContainer.parentElement
+                ) {
+                    this.videoPlayer.parentElement?.insertBefore(
+                        this.danmakuContainer,
+                        this.videoPlayer.nextSibling
+                    );
                 }
-                if (this.danmakuInputContainer && !this.danmakuInputContainer.parentElement) {
+                if (
+                    this.danmakuInputContainer &&
+                    !this.danmakuInputContainer.parentElement
+                ) {
                     const belowPlayer = await this.waitForElement("#below");
                     if (belowPlayer) {
                         belowPlayer.prepend(this.danmakuInputContainer);
                     }
                 }
 
-                // Re-setup event listeners for the new video context
                 await this.setupEventListeners(this.videoPlayer, this.danmaku!);
                 console.log("Danmaku system re-initialized for new video.");
             }
         } else if (newVideoId && !this.videoPlayer) {
-            // If the video ID is the same but the player is missing (e.g., after navigating away and back)
             console.log("Player not found, attempting to re-initialize.");
-            this.isInitialized = false; // Force re-initialization
+            this.isInitialized = false;
             this.videoId = null;
-            this.initializeDanmaku(); // Retry initialization
+            this.initializeDanmaku();
         }
     }
 
-    public async setupEventListeners(videoPlayer: HTMLVideoElement, danmaku: Danmaku): Promise<void> {
+    public async setupEventListeners(
+        videoPlayer: HTMLVideoElement,
+        danmaku: Danmaku
+    ): Promise<void> {
         const onPlay = () => danmaku.play();
         const onPause = () => danmaku.pause();
         const onSeek = () => danmaku.seek();
 
-        // This handler will now be called either by the event or manually.
         const onLoadedMetadata = async () => {
-            // Prevent this from running more than once
             if (danmaku.getCommentsCount > 0) return;
 
             console.log("Video metadata loaded. Loading comments.");
             const videoDuration = videoPlayer.duration / 60;
-            const limit = videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
-            
+            const limit =
+                videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
+
             const comments = await getComments("youtube", this.videoId!, limit);
             danmaku.setComments(comments);
             this.danmakuInputInstance!.updateCommentsCount(comments.length);
@@ -123,16 +140,17 @@ export class YouTubeAdapter implements SiteAdapter {
         videoPlayer.addEventListener("seeked", onSeek);
         videoPlayer.addEventListener("loadedmetadata", onLoadedMetadata);
 
-        // Store listeners to be able to remove them later
         danmaku.setVideoEventListeners([
             { event: "play", listener: onPlay },
             { event: "pause", listener: onPause },
             { event: "seeked", listener: onSeek },
-            { event: "loadedmetadata", listener: onLoadedMetadata }
+            { event: "loadedmetadata", listener: onLoadedMetadata },
         ]);
 
         if (videoPlayer.readyState >= 1) {
-            console.log("Video metadata was already loaded. Manually triggering comment load.");
+            console.log(
+                "Video metadata was already loaded. Manually triggering comment load."
+            );
             onLoadedMetadata();
         }
 
@@ -187,8 +205,6 @@ export class YouTubeAdapter implements SiteAdapter {
         this.videoPlayer = null;
         this.videoElementForObserver = null;
         this.videoId = null;
-        // Keep isInitialized true, but components are now detached.
-        // This allows re-initialization on the next video page.
         console.log("Danmaku instance hidden, ready for re-use.");
     }
 
