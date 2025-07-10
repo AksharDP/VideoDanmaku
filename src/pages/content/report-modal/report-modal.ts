@@ -232,9 +232,11 @@ export class ReportModal {
         if (reportSection) {
             reportSection.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
-                    <div style="color: #44ff44; font-size: 48px; margin-bottom: 16px;">✓</div>
-                    <h3 style="color: #fff; margin: 0 0 12px 0;">Report Submitted</h3>
-                    <p style="color: #ccc; margin: 0 0 20px 0; font-size: 14px;">
+                    <div style="margin-bottom: 20px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#44ff44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+                    </div>
+                    <h3 style="color: #fff; margin: 0 0 16px 0;">Report Submitted</h3>
+                    <p style="color: #ccc; margin: 0 0 24px 0; font-size: 14px;">
                         Thank you for helping keep our community safe. 
                         We'll review this report and take appropriate action.
                     </p>
