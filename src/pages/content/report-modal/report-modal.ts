@@ -17,7 +17,7 @@ export class ReportModal {
 
     public show(comment: Comment): void {
         if (document.getElementById("danmaku-report-modal")) return;
-        
+
         this.currentComment = comment;
         this.createModal();
         this.loadAndAppendForm().then(() => {
@@ -57,12 +57,18 @@ export class ReportModal {
 
     private async loadAndAppendForm(): Promise<void> {
         try {
-            const response = await fetch(chrome.runtime.getURL('src/pages/content/report-modal/report-modal.html'));
+            const response = await fetch(
+                chrome.runtime.getURL(
+                    "src/pages/content/report-modal/report-modal.html"
+                )
+            );
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const html = await response.text();
-            const modalContent = this.modalElement?.querySelector('.danmaku-modal-content');
+            const modalContent = this.modalElement?.querySelector(
+                ".danmaku-modal-content"
+            );
             if (modalContent) {
                 const reportForm = document.createElement("div");
                 reportForm.className = "danmaku-report-form";
@@ -76,7 +82,9 @@ export class ReportModal {
     }
 
     private populateCommentText(): void {
-        const commentTextElement = document.getElementById("danmaku-report-comment-text");
+        const commentTextElement = document.getElementById(
+            "danmaku-report-comment-text"
+        );
         if (commentTextElement && this.currentComment) {
             commentTextElement.textContent = this.currentComment.content;
         }
@@ -85,31 +93,36 @@ export class ReportModal {
     private setupEventListeners(): void {
         const cancelBtn = document.getElementById("danmaku-report-cancel");
         const submitBtn = document.getElementById("danmaku-report-submit");
-        const radioButtons = document.querySelectorAll('input[name="report-reason"]');
-        const otherTextarea = document.getElementById("danmaku-report-other-reason") as HTMLTextAreaElement;
+        const radioButtons = document.querySelectorAll(
+            'input[name="report-reason"]'
+        );
+        const otherTextarea = document.getElementById(
+            "danmaku-report-other-reason"
+        ) as HTMLTextAreaElement;
 
-        // Cancel button
         cancelBtn?.addEventListener("click", this.closeModal);
 
-        // Submit button
         submitBtn?.addEventListener("click", () => this.handleSubmit());
 
-        // Radio button changes
-        radioButtons.forEach(radio => {
+        radioButtons.forEach((radio) => {
             radio.addEventListener("change", this.handleReasonChange);
         });
 
-        // Other textarea changes
         otherTextarea?.addEventListener("input", this.handleOtherTextChange);
 
-        // Update submit button state initially
         this.updateSubmitButtonState();
     }
 
     private handleReasonChange(): void {
-        const selectedReason = document.querySelector('input[name="report-reason"]:checked') as HTMLInputElement;
-        const otherSection = document.getElementById("danmaku-report-other-section");
-        const otherTextarea = document.getElementById("danmaku-report-other-reason") as HTMLTextAreaElement;
+        const selectedReason = document.querySelector(
+            'input[name="report-reason"]:checked'
+        ) as HTMLInputElement;
+        const otherSection = document.getElementById(
+            "danmaku-report-other-section"
+        );
+        const otherTextarea = document.getElementById(
+            "danmaku-report-other-reason"
+        ) as HTMLTextAreaElement;
 
         if (selectedReason?.value === "other") {
             otherSection!.style.display = "block";
@@ -129,15 +142,18 @@ export class ReportModal {
     }
 
     private updateCharCount(): void {
-        const otherTextarea = document.getElementById("danmaku-report-other-reason") as HTMLTextAreaElement;
-        const charCountElement = document.getElementById("danmaku-report-char-count");
+        const otherTextarea = document.getElementById(
+            "danmaku-report-other-reason"
+        ) as HTMLTextAreaElement;
+        const charCountElement = document.getElementById(
+            "danmaku-report-char-count"
+        );
         const charLimitElement = charCountElement?.parentElement;
 
         if (otherTextarea && charCountElement) {
             const length = otherTextarea.value.length;
             charCountElement.textContent = length.toString();
 
-            // Update styling based on character count
             if (charLimitElement) {
                 charLimitElement.classList.remove("warning", "error");
                 if (length > 450) {
@@ -150,9 +166,15 @@ export class ReportModal {
     }
 
     private updateSubmitButtonState(): void {
-        const submitBtn = document.getElementById("danmaku-report-submit") as HTMLButtonElement;
-        const selectedReason = document.querySelector('input[name="report-reason"]:checked') as HTMLInputElement;
-        const otherTextarea = document.getElementById("danmaku-report-other-reason") as HTMLTextAreaElement;
+        const submitBtn = document.getElementById(
+            "danmaku-report-submit"
+        ) as HTMLButtonElement;
+        const selectedReason = document.querySelector(
+            'input[name="report-reason"]:checked'
+        ) as HTMLInputElement;
+        const otherTextarea = document.getElementById(
+            "danmaku-report-other-reason"
+        ) as HTMLTextAreaElement;
 
         if (!submitBtn) return;
 
@@ -160,11 +182,9 @@ export class ReportModal {
 
         if (selectedReason) {
             if (selectedReason.value === "other") {
-                // For "other", require text and validate length
                 const text = otherTextarea?.value.trim();
                 isValid = !!(text && text.length > 0 && text.length <= 500);
             } else {
-                // For predefined reasons, just need selection
                 isValid = true;
             }
         }
@@ -175,8 +195,12 @@ export class ReportModal {
     private async handleSubmit(): Promise<void> {
         if (!this.currentComment) return;
 
-        const selectedReason = document.querySelector('input[name="report-reason"]:checked') as HTMLInputElement;
-        const otherTextarea = document.getElementById("danmaku-report-other-reason") as HTMLTextAreaElement;
+        const selectedReason = document.querySelector(
+            'input[name="report-reason"]:checked'
+        ) as HTMLInputElement;
+        const otherTextarea = document.getElementById(
+            "danmaku-report-other-reason"
+        ) as HTMLTextAreaElement;
 
         if (!selectedReason) {
             this.showError("Please select a reason for reporting.");
@@ -189,17 +213,22 @@ export class ReportModal {
         if (reason === "other") {
             additionalDetails = otherTextarea?.value.trim() || "";
             if (!additionalDetails) {
-                this.showError("Please provide additional details for 'Other' reports.");
+                this.showError(
+                    "Please provide additional details for 'Other' reports."
+                );
                 return;
             }
             if (additionalDetails.length > 500) {
-                this.showError("Additional details must be 500 characters or less.");
+                this.showError(
+                    "Additional details must be 500 characters or less."
+                );
                 return;
             }
         }
 
-        // Show loading state
-        const submitBtn = document.getElementById("danmaku-report-submit") as HTMLButtonElement;
+        const submitBtn = document.getElementById(
+            "danmaku-report-submit"
+        ) as HTMLButtonElement;
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = "Reporting...";
@@ -220,14 +249,12 @@ export class ReportModal {
             console.error("Report submission error:", error);
             this.showError("An error occurred while submitting the report.");
         } finally {
-            // Restore button state
             submitBtn.disabled = false;
             submitBtn.textContent = originalText || "Report";
         }
     }
 
     private showSuccess(): void {
-        // Replace the form content with success message
         const reportSection = document.querySelector(".danmaku-report-section");
         if (reportSection) {
             reportSection.innerHTML = `
@@ -244,8 +271,9 @@ export class ReportModal {
                 </div>
             `;
 
-            // Add close handler
-            const closeBtn = document.getElementById("danmaku-report-close-success");
+            const closeBtn = document.getElementById(
+                "danmaku-report-close-success"
+            );
             closeBtn?.addEventListener("click", this.closeModal);
         }
     }
@@ -255,8 +283,7 @@ export class ReportModal {
         if (errorDiv) {
             errorDiv.textContent = message;
             errorDiv.style.display = "block";
-            
-            // Hide error after 5 seconds
+
             setTimeout(() => {
                 errorDiv.style.display = "none";
             }, 5000);
