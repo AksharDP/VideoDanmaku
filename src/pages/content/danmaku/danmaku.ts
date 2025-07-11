@@ -149,7 +149,9 @@ export class Danmaku {
     public show(): void {
         this.container.style.display = "";
         this.isVisible = true;
-        this.play();
+        if (!this.videoPlayer.paused) {
+            this.play();
+        }
     }
 
     public hide(): void {
