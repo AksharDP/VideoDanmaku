@@ -1,5 +1,6 @@
-import "./css/danmaku-base.css";
-import "./css/login-modal.css";
+import "./css/danmaku.css";
+import "./css/danmaku-input.css";
+import "./css/modal-login.css";
 
 import { YouTubeAdapter } from "./youtube/youtube";
 import { SiteAdapter } from "./interfaces/SiteAdapter";

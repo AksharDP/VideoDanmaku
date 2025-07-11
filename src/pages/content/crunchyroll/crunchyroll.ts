@@ -1,11 +1,12 @@
 import { Danmaku } from "../danmaku/danmaku";
 import { DanmakuInput } from "../danmaku/danmakuInput";
 import { getComments } from "../api";
-import { LoginModal } from "../login-modal";
+import { LoginModal } from "../modal-login/modal-login";
 import { SiteAdapter } from "../interfaces/SiteAdapter";
 import danmakuHtml from "../danmaku/danmakuInput.html?raw";
 import crunchyrollCss from "../css/sites/crunchyroll.css?raw";
-import danmakuBaseCss from "../css/danmaku-base.css?raw";
+import danmakuCss from "../css/danmaku.css?raw";
+import danmakuInputCss from "../css/danmaku-input.css?raw";
 
 export class CrunchyrollAdapter implements SiteAdapter {
     private danmaku: Danmaku | null = null;
@@ -30,7 +31,7 @@ export class CrunchyrollAdapter implements SiteAdapter {
         }
         const style = document.createElement("style");
         style.setAttribute("data-extension", "videodanmaku-css");
-        style.textContent = danmakuBaseCss + crunchyrollCss;
+        style.textContent = danmakuCss + danmakuInputCss + crunchyrollCss;
         document.head.appendChild(style);
     }
 

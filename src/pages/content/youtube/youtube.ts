@@ -1,9 +1,10 @@
 import { DanmakuInput } from "../danmaku/danmakuInput";
 import { getComments, Comment } from "../api";
 import { Danmaku } from "../danmaku/danmaku";
-import { LoginModal } from "../login-modal";
+import { LoginModal } from "../modal-login/modal-login";
 import youtubeCss from "../css/sites/youtube.css?raw";
-import danmakuBaseCss from "../css/danmaku-base.css?raw";
+import danmakuCss from "../css/danmaku.css?raw";
+import danmakuInputCss from "../css/danmaku-input.css?raw";
 import { SiteAdapter } from "../interfaces/SiteAdapter";
 
 export class YouTubeAdapter implements SiteAdapter {
@@ -29,7 +30,7 @@ export class YouTubeAdapter implements SiteAdapter {
         }
         const style = document.createElement("style");
         style.setAttribute("data-extension", "videodanmaku-css");
-        style.textContent = danmakuBaseCss + youtubeCss;
+        style.textContent = danmakuCss + danmakuInputCss + youtubeCss;
         document.head.appendChild(style);
         console.log("YouTube CSS injected.");
     }
@@ -119,20 +120,23 @@ export class YouTubeAdapter implements SiteAdapter {
         const onSeek = () => danmaku.seek();
 
         const onLoadedMetadata = async () => {
-            if (danmaku.getCommentsCount > 0) return;
+            chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {
+                if (danmakuEnabled === false) return;
+                if (danmaku.getCommentsCount > 0) return;
 
-            console.log("Video metadata loaded. Loading comments.");
-            const videoDuration = videoPlayer.duration / 60;
-            const limit =
-                videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
+                console.log("Video metadata loaded. Loading comments.");
+                const videoDuration = videoPlayer.duration / 60;
+                const limit =
+                    videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
 
-            const comments = await getComments("youtube", this.videoId!, limit);
-            danmaku.setComments(comments);
-            this.danmakuInputInstance!.updateCommentsCount(comments.length);
+                const comments = await getComments("youtube", this.videoId!, limit);
+                danmaku.setComments(comments);
+                this.danmakuInputInstance!.updateCommentsCount(comments.length);
 
-            if (!videoPlayer.paused) {
-                danmaku.play();
-            }
+                if (!videoPlayer.paused) {
+                    danmaku.play();
+                }
+            });
         };
 
         videoPlayer.addEventListener("play", onPlay);

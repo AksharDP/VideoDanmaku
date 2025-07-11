@@ -1,0 +1,95 @@
+
+* {
+    font-family: Roboto, Arial, sans-serif;
+}
+
+.danmaku-comment {
+    position: absolute;
+    pointer-events: all;
+    white-space: nowrap;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 24px;
+    font-weight: normal;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 20;
+    line-height: 1;
+}
+
+.danmaku-comment.small {
+    font-size: 18px;
+}
+
+.danmaku-comment.normal {
+    font-size: 24px;
+}
+
+.danmaku-comment.large {
+    font-size: 30px;
+}
+
+.danmaku-comment.slide {
+    transition: none;
+}
+
+.danmaku-comment.top {
+    text-align: center;
+    left: 50% !important;
+    transform: translateX(-50%);
+}
+
+.danmaku-comment.bottom {
+    text-align: center;
+    left: 50% !important;
+    transform: translateX(-50%);
+}
+
+.iridescent-effect-3 {
+    background: radial-gradient(
+        circle at 20% 80%,
+        #e6e6fa 5%,
+        #add8e6 15%,
+        #90ee90 25%,
+        #ffe4e1 35%,
+        #d8bfd8 45%,
+        #e6e6fa 55%
+    );
+    background-size: 200% 200%;
+    animation: moveGradient 5s infinite alternate;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@keyframes moveGradient {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+.iridescent-effect-4 {
+    background-color: #333;
+    background-image: linear-gradient(45deg, #00f, #f0f),
+        linear-gradient(-45deg, #0f0, #ff0);
+    background-size: 150% 150%;
+    background-position: 0% 0%;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+    animation: animateIridescence 10s infinite alternate;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@keyframes animateIridescence {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}

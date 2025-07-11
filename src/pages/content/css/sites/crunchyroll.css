@@ -1,10 +1,9 @@
-/* Crunchyroll-specific danmaku styles */
 .danmaku-input-container {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    gap: 0;
     margin: 1rem 0;
     background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
     border: 1px solid #444;
@@ -17,16 +16,24 @@
     margin-right: auto;
 }
 
+.danmaku-input-area {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .danmaku-input-wrapper {
     flex-grow: 1;
     position: relative;
+    border: none;
 }
 
 .danmaku-input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #555;
-    border-radius: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 8px 0 0 8px;
     color: #fff;
     padding: 10px 12px;
     font-size: 14px;
@@ -36,9 +43,7 @@
 
 .danmaku-input:focus {
     outline: none;
-    border-color: #f78c6c;
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 2px rgba(247, 140, 108, 0.2);
+    box-shadow: none;
 }
 
 .danmaku-input::placeholder {
@@ -49,7 +54,7 @@
     background: linear-gradient(135deg, #f78c6c 0%, #ff6b35 100%);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0;
     padding: 10px 20px;
     cursor: pointer;
     font-weight: 600;
@@ -76,7 +81,6 @@
     transform: none;
 }
 
-/* Style button and dropdown */
 .style-button {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid #555;
@@ -111,7 +115,6 @@
     display: none;
 }
 
-/* Color selection */
 .color-selection {
     margin-bottom: 12px;
 }
@@ -147,7 +150,6 @@
     transform: scale(1.1);
 }
 
-/* Position selection */
 .position-selection {
     margin-bottom: 12px;
 }
@@ -186,7 +188,6 @@
     background: rgba(247, 140, 108, 0.2);
 }
 
-/* Character count */
 .char-count-container {
     margin-top: 8px;
     text-align: right;
@@ -205,7 +206,6 @@
     color: #ff4444;
 }
 
-/* Login prompt */
 .login-prompt {
     background: rgba(247, 140, 108, 0.1);
     border: 1px solid #f78c6c;
@@ -222,7 +222,6 @@
     background: rgba(247, 140, 108, 0.2);
 }
 
-/* Comments loaded indicator */
 .comments-loaded {
     font-size: 11px;
     color: #999;
@@ -230,7 +229,6 @@
     margin-top: 8px;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
     .danmaku-input-container {
         flex-direction: column;
@@ -242,6 +240,18 @@
     .danmaku-comment-button {
         width: 100%;
         padding: 12px;
+        border-radius: 8px;
+    }
+
+    .danmaku-input-area {
+        flex-direction: column;
+        border: none;
+        background: transparent;
+    }
+
+    .danmaku-input {
+        border-radius: 8px;
+        border: 1px solid #555;
     }
 
     .style-menu {

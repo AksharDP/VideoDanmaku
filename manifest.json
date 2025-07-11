@@ -32,9 +32,9 @@
     {
       "resources": [
         "contentStyle.css",
-        "src/pages/content/login-modal/login-modal.html",
+        "src/pages/content/modal-login/modal-login.html",
         "src/pages/content/danmaku/danmakuinput.html",
-        "src/pages/content/report-modal/report-modal.html"
+        "src/pages/content/modal-report/modal-report.html"
       ],
       "matches": [
         "https://www.youtube.com/*",

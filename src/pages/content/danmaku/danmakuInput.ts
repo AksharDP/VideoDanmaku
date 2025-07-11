@@ -1,6 +1,6 @@
 import { postComment, Comment } from "../api";
 import { Danmaku } from "./danmaku";
-import { LoginModal } from "../login-modal";
+import { LoginModal } from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
 
 export class DanmakuInput {
@@ -16,6 +16,7 @@ export class DanmakuInput {
     private styleMenu!: HTMLElement;
     private charCountContainer!: HTMLElement;
     private currentCharCount!: HTMLElement;
+    private toggleButton!: HTMLButtonElement;
 
     private colorBoxes!: NodeListOf<HTMLElement>;
     private customColorPicker!: HTMLInputElement;
@@ -34,6 +35,9 @@ export class DanmakuInput {
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area === "local" && changes.authToken) {
                 this.updateUIBasedOnAuth();
+            }
+            if (area === 'local' && changes.danmakuEnabled) {
+                this.updateToggleButton(changes.danmakuEnabled.newValue);
             }
         });
     }
@@ -58,6 +62,7 @@ export class DanmakuInput {
         this.currentCharCount = this.container.querySelector(
             "#current-char-count"
         )!;
+        this.toggleButton = this.container.querySelector(".danmaku-toggle-button")!;
         this.colorBoxes = this.styleMenu.querySelectorAll(
             ".color-box:not(#custom-color-picker)"
         );
@@ -71,6 +76,12 @@ export class DanmakuInput {
         this.updateUIBasedOnAuth();
         this.updateSelectedColorUI(this.selectedColor);
         this.updateSelectedPositionUI(this.selectedPosition);
+
+        chrome.storage.local.get("danmakuEnabled", ({ danmakuEnabled }) => {
+            const isEnabled = danmakuEnabled !== false;
+            this.updateToggleButton(isEnabled);
+            this.danmaku.toggleVisibility(isEnabled);
+        });
 
         return this.container;
     }
@@ -118,6 +129,11 @@ export class DanmakuInput {
             this.styleButton.classList.toggle("open");
         });
 
+        this.toggleButton.addEventListener("click", () => {
+            const isEnabled = this.danmaku.toggleVisibility();
+            chrome.storage.local.set({ danmakuEnabled: isEnabled });
+        });
+
         document.addEventListener("click", (e) => {
             if (
                 !this.styleMenu.contains(e.target as Node) &&
@@ -157,6 +173,18 @@ export class DanmakuInput {
                 this.updateSelectedPositionUI(position);
             });
         });
+    }
+
+    private updateToggleButton(isEnabled: boolean) {
+        const enabledIcon = this.toggleButton.querySelector(".toggle-enabled");
+        const disabledIcon = this.toggleButton.querySelector(".toggle-disabled");
+        if (isEnabled) {
+            enabledIcon?.setAttribute("style", "display: block");
+            disabledIcon?.setAttribute("style", "display: none");
+        } else {
+            enabledIcon?.setAttribute("style", "display: none");
+            disabledIcon?.setAttribute("style", "display: block");
+        }
     }
 
     private updateSelectedColorUI(color: string) {

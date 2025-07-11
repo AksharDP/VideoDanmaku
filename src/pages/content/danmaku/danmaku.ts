@@ -1,5 +1,5 @@
 import { Comment } from "../api";
-import { ReportModal } from "../report-modal/report-modal";
+import { ReportModal } from "../modal-report/modal-report";
 
 interface DanmakuComment extends Comment {
     y: number;
@@ -28,6 +28,7 @@ export class Danmaku {
     private animationFrameId: number | null = null;
     private videoEventListeners: VideoEventListener[] = [];
     private reportModal: ReportModal;
+    private isVisible: boolean = true;
 
     private commentsCount: number = 0;
 
@@ -75,7 +76,7 @@ export class Danmaku {
     }
 
     public play(): void {
-        if (this.isRunning) return;
+        if (this.isRunning || !this.isVisible) return;
         console.log("Danmaku playing");
 
         this.resyncCommentQueue();
@@ -147,10 +148,24 @@ export class Danmaku {
 
     public show(): void {
         this.container.style.display = "";
+        this.isVisible = true;
+        this.play();
     }
 
     public hide(): void {
         this.container.style.display = "none";
+        this.isVisible = false;
+        this.pause();
+    }
+
+    public toggleVisibility(force?: boolean): boolean {
+        this.isVisible = force ?? !this.isVisible;
+        if (this.isVisible) {
+            this.show();
+        } else {
+            this.hide();
+        }
+        return this.isVisible;
     }
 
     public addComment(comment: Comment): void {

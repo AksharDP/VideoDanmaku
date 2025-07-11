@@ -1,5 +1,5 @@
 import { reportComment, type Comment } from "../api";
-import "../css/report-modal.css";
+import "../css/modal-report.css";
 
 export class ReportModal {
     private modalElement: HTMLElement | null = null;

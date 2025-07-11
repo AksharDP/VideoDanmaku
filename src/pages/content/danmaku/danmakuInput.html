@@ -1,10 +1,95 @@
 <div class="danmaku-input-container">
-    <div class="danmaku-login-prompt" style="display: none;">
+    <div class="danmaku-login-prompt" style="display: none">
         <div class="line"></div>
         <span class="text">Login to send danmaku</span>
         <div class="line"></div>
     </div>
-    <div class="danmaku-style-popup">
+    <div class="danmaku-input-area">
+        <div class="danmaku-input-wrapper">
+            <div class="danmaku-input-overlay-container">
+                <input
+                    type="text"
+                    id="danmaku-input-field"
+                    class="danmaku-input"
+                    placeholder="Add comment..."
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                />
+                <div
+                    id="danmaku-login-prompt"
+                    class="danmaku-login-prompt-overlay"
+                    style="display: none"
+                >
+                    Login/Signup
+                </div>
+            </div>
+            <div class="danmaku-comments-count">
+                <span id="danmaku-comments-loaded">Loading comments...</span>
+            </div>
+            <div
+                id="danmaku-char-count"
+                class="danmaku-char-count"
+                style="display: none"
+            >
+                <span id="current-char-count">0</span>/
+            </div>
+        </div>
+
+        <button class="danmaku-comment-button">Comment</button>
+    </div>
+    <div class="danmaku-controls-container">
+        <button class="danmaku-toggle-button" title="Toggle danmaku visibility">
+            <span class="toggle-icon-wrapper">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="lucide lucide-eye"
+                >
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#00FF00"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="toggle-indicator toggle-enabled"
+                >
+                    <path d="M20 6 9 17l-5-5"/>
+                </svg>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="toggle-indicator toggle-disabled lucide lucide-x-icon lucide-x"
+                    width="14"
+                    height="14"
+                    viewBox="2 2 20 20"
+                    fill="none"
+                    stroke="#F00"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="display: block; margin: auto;"
+                >
+                    <path d="M17 7L7 17"/>
+                    <path d="M7 7l10 10"/>
+                </svg>
+            </span>
+        </button>
+
         <button class="danmaku-style-button">
             Style
             <svg
@@ -150,34 +235,4 @@
             </div>
         </div>
     </div>
-
-    <div class="danmaku-input-wrapper">
-        <div class="danmaku-input-overlay-container">
-            <input
-                type="text"
-                id="danmaku-input-field"
-                class="danmaku-input"
-                placeholder="Add comment..."
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-            />
-            <div id="danmaku-login-prompt" class="danmaku-login-prompt-overlay" style="display: none">
-                Login/Signup
-            </div>
-        </div>
-        <div class="danmaku-comments-count">
-            <span id="danmaku-comments-loaded">Loading comments...</span>
-        </div>
-        <div
-            id="danmaku-char-count"
-            class="danmaku-char-count"
-            style="display: none"
-        >
-            <span id="current-char-count">0</span>/
-        </div>
-    </div>
-
-    <button class="danmaku-comment-button">Comment</button>
 </div>

@@ -1,4 +1,3 @@
-/* Report Modal Styles */
 .danmaku-report-form {
     width: 100%;
     display: flex;
@@ -160,7 +159,6 @@
     font-size: 14px;
 }
 
-/* Animation for showing/hiding other section */
 .danmaku-report-other-section {
     transition: all 0.3s ease;
     overflow: hidden;
@@ -176,14 +174,12 @@
     opacity: 1;
 }
 
-/* Focus states */
 .danmaku-report-reason:focus-within {
     background: rgba(255, 255, 255, 0.08);
     outline: 1px solid #0066cc;
     outline-offset: 1px;
 }
 
-/* Mobile responsive */
 @media (max-width: 480px) {
     .danmaku-report-actions {
         flex-direction: column;
