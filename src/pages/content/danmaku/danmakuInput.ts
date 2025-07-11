@@ -38,6 +38,7 @@ export class DanmakuInput {
             }
             if (area === 'local' && changes.danmakuEnabled) {
                 this.updateToggleButton(changes.danmakuEnabled.newValue);
+                this.updateCommentsStatus(changes.danmakuEnabled.newValue, this.danmaku.getCommentsCount);
             }
         });
     }
@@ -81,6 +82,7 @@ export class DanmakuInput {
             const isEnabled = danmakuEnabled !== false;
             this.updateToggleButton(isEnabled);
             this.danmaku.toggleVisibility(isEnabled);
+            this.updateCommentsStatus(isEnabled, this.danmaku.getCommentsCount);
         });
 
         return this.container;
@@ -99,6 +101,30 @@ export class DanmakuInput {
             commentsLoadedEl.textContent = `${count} comment${
                 count === 1 ? "" : "s"
             } loaded`;
+        } else {
+            console.error(
+                "DanmakuInput: Could not find #danmaku-comments-loaded element to update."
+            );
+        }
+    }
+
+    public updateCommentsStatus(isEnabled: boolean, commentsCount: number = 0): void {
+        const commentsLoadedEl = this.container.querySelector<HTMLElement>(
+            "#danmaku-comments-loaded"
+        );
+
+        if (commentsLoadedEl) {
+            if (isEnabled) {
+                if (commentsCount > 0) {
+                    commentsLoadedEl.textContent = `${commentsCount} comment${
+                        commentsCount === 1 ? "" : "s"
+                    } loaded`;
+                } else {
+                    commentsLoadedEl.textContent = "Loading comments...";
+                }
+            } else {
+                commentsLoadedEl.textContent = "Comments disabled";
+            }
         } else {
             console.error(
                 "DanmakuInput: Could not find #danmaku-comments-loaded element to update."
@@ -132,6 +158,7 @@ export class DanmakuInput {
         this.toggleButton.addEventListener("click", () => {
             const isEnabled = this.danmaku.toggleVisibility();
             chrome.storage.local.set({ danmakuEnabled: isEnabled });
+            this.updateCommentsStatus(isEnabled, this.danmaku.getCommentsCount);
         });
 
         document.addEventListener("click", (e) => {

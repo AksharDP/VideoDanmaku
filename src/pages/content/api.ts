@@ -47,15 +47,21 @@ export interface ReportResponse {
 
 export async function getComments(platform: string, videoId: string, commentLimit: number): Promise<Comment[]> {
     try {
+        console.log("getComments called with:", { platform, videoId, commentLimit });
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${commentLimit}`;
+        console.log("Fetching from URL:", url);
         const response = await fetch(url);
+        console.log("Response status:", response.status, "ok:", response.ok);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        console.log("Response data:", data);
         if (data.success && Array.isArray(data.comments)) {
+            console.log("Returning comments:", data.comments.length);
             return data.comments;
         }
+        console.log("No comments found or invalid response format");
         return [];
     } catch (error) {
         console.error("Failed to fetch comments:", error);

@@ -121,15 +121,26 @@ export class YouTubeAdapter implements SiteAdapter {
 
         const onLoadedMetadata = async () => {
             chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {
-                if (danmakuEnabled === false) return;
-                if (danmaku.getCommentsCount > 0) return;
+                console.log("onLoadedMetadata called - danmakuEnabled:", danmakuEnabled, "commentsCount:", danmaku.getCommentsCount);
+                if (danmakuEnabled === false) {
+                    console.log("Danmaku is disabled, skipping comment load");
+                    this.danmakuInputInstance!.updateCommentsStatus(false, 0);
+                    return;
+                }
+                if (danmaku.getCommentsCount > 0) {
+                    console.log("Comments already loaded, skipping API call");
+                    this.danmakuInputInstance!.updateCommentsStatus(true, danmaku.getCommentsCount);
+                    return;
+                }
 
                 console.log("Video metadata loaded. Loading comments.");
                 const videoDuration = videoPlayer.duration / 60;
                 const limit =
                     videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
 
+                console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
                 const comments = await getComments("youtube", this.videoId!, limit);
+                console.log("Received comments:", comments.length);
                 danmaku.setComments(comments);
                 this.danmakuInputInstance!.updateCommentsCount(comments.length);
 
