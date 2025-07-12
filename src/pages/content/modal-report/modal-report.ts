@@ -1,4 +1,4 @@
-import { reportComment, type Comment } from "../api";
+import {type Comment, reportComment} from "../api";
 import "../css/modal-report.css";
 
 export class ReportModal {
@@ -63,7 +63,9 @@ export class ReportModal {
                 )
             );
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.error("Failed to load report form HTML: ", response.status);
+                return;
+                // throw new Error(`HTTP error! status: ${response.status}`);
             }
             const html = await response.text();
             const modalContent = this.modalElement?.querySelector(
@@ -207,10 +209,9 @@ export class ReportModal {
             return;
         }
 
-        let reason = selectedReason.value;
         let additionalDetails = "";
 
-        if (reason === "other") {
+        if (selectedReason.value === "other") {
             additionalDetails = otherTextarea?.value.trim() || "";
             if (!additionalDetails) {
                 this.showError(
@@ -236,7 +237,7 @@ export class ReportModal {
         try {
             const success = await reportComment(
                 this.currentComment.id,
-                reason,
+                selectedReason.value,
                 additionalDetails
             );
 

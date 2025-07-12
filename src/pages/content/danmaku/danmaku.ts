@@ -47,18 +47,8 @@ export class Danmaku {
         this.addVideoEventListeners();
     }
 
-    public getVideoPlayerInfo(): void {
-        console.log("Video Player Info:");
-        console.log(`Current Time: ${this.videoPlayer.currentTime}`);
-        console.log(`Duration: ${this.videoPlayer.duration}`);
-    }
-
     public get getCurrentTime(): number {
         return this.videoPlayer.currentTime;
-    }
-
-    public get getVideoPlayer(): HTMLVideoElement {
-        return this.videoPlayer;
     }
 
     public get getCommentsCount(): number {
@@ -308,16 +298,18 @@ export class Danmaku {
 
         const copyButton = document.createElement("button");
         copyButton.className = "danmaku-popup-button";
-        copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+        copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
         copyButton.onclick = (e) => {
             e.stopPropagation();
             e.preventDefault();
-            navigator.clipboard.writeText(comment.content);
+            navigator.clipboard.writeText(comment.content).catch((err) => {
+                console.error("Failed to copy text: ", err);
+            });
         };
 
         const reportButton = document.createElement("button");
         reportButton.className = "danmaku-popup-button";
-        reportButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert-icon lucide-circle-alert"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`;
+        reportButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert-icon lucide-circle-alert"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`;
         reportButton.onclick = (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -365,7 +357,7 @@ export class Danmaku {
 
         switch (comment.scrollMode) {
             case "slide":
-                const containerWidth = this.container.offsetWidth;
+                { const containerWidth = this.container.offsetWidth;
                 danmakuComment.speed =
                     (containerWidth + commentWidth) / Danmaku.DURATION;
                 const distanceTraveled = timeElapsed * danmakuComment.speed;
@@ -375,7 +367,7 @@ export class Danmaku {
                 this.slidingLanes[lane] =
                     performance.now() +
                     (commentWidth / danmakuComment.speed) * 1000;
-                break;
+                break; }
             case "top":
                 danmakuElement.style.top = `${danmakuComment.y}px`;
                 danmakuElement.style.left = `50%`;
@@ -383,7 +375,7 @@ export class Danmaku {
                 this.topLanes[lane] = danmakuComment.expiry;
                 break;
             case "bottom":
-                const totalLanes = Math.floor(
+                { const totalLanes = Math.floor(
                     this.container.offsetHeight / Danmaku.LANE_HEIGHT
                 );
                 danmakuComment.y =
@@ -392,7 +384,7 @@ export class Danmaku {
                 danmakuElement.style.left = `50%`;
                 danmakuElement.style.transform = `translateX(-50%)`;
                 this.bottomLanes[lane] = danmakuComment.expiry;
-                break;
+                break; }
         }
 
         this.activeComments.push(danmakuComment);

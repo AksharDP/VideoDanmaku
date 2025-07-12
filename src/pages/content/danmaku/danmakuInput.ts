@@ -1,6 +1,6 @@
-import { postComment, Comment } from "../api";
-import { Danmaku } from "./danmaku";
-import { LoginModal } from "../modal-login/modal-login";
+import {Comment, postComment} from "../api";
+import {Danmaku} from "./danmaku";
+import {LoginModal} from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
 
 export class DanmakuInput {
@@ -78,7 +78,7 @@ export class DanmakuInput {
         this.updateSelectedColorUI(this.selectedColor);
         this.updateSelectedPositionUI(this.selectedPosition);
 
-        chrome.storage.local.get("danmakuEnabled", ({ danmakuEnabled }) => {
+        chrome.storage.local.get("danmakuEnabled", ({danmakuEnabled}) => {
             const isEnabled = danmakuEnabled !== false;
             this.updateToggleButton(isEnabled);
             this.danmaku.toggleVisibility(isEnabled);
@@ -157,7 +157,7 @@ export class DanmakuInput {
 
         this.toggleButton.addEventListener("click", () => {
             const isEnabled = this.danmaku.toggleVisibility();
-            chrome.storage.local.set({ danmakuEnabled: isEnabled });
+            chrome.storage.local.set({danmakuEnabled: isEnabled});
             this.updateCommentsStatus(isEnabled, this.danmaku.getCommentsCount);
         });
 

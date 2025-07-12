@@ -1,11 +1,11 @@
-import { DanmakuInput } from "../danmaku/danmakuInput";
-import { getComments, Comment } from "../api";
-import { Danmaku } from "../danmaku/danmaku";
-import { LoginModal } from "../modal-login/modal-login";
+import {DanmakuInput} from "../danmaku/danmakuInput";
+import {getComments} from "../api";
+import {Danmaku} from "../danmaku/danmaku";
+import {LoginModal} from "../modal-login/modal-login";
 import youtubeCss from "../css/sites/youtube.css?raw";
 import danmakuCss from "../css/danmaku.css?raw";
 import danmakuInputCss from "../css/danmaku-input.css?raw";
-import { SiteAdapter } from "../interfaces/SiteAdapter";
+import {SiteAdapter} from "../interfaces/SiteAdapter";
 
 export class YouTubeAdapter implements SiteAdapter {
     public isInitialized: boolean = false;
@@ -120,7 +120,7 @@ export class YouTubeAdapter implements SiteAdapter {
         const onSeek = () => danmaku.seek();
 
         const onLoadedMetadata = async () => {
-            chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {
+            chrome.storage.local.get("danmakuEnabled", async ({danmakuEnabled}) => {
                 console.log("onLoadedMetadata called - danmakuEnabled:", danmakuEnabled, "commentsCount:", danmaku.getCommentsCount);
                 if (danmakuEnabled === false) {
                     console.log("Danmaku is disabled, skipping comment load");
@@ -156,10 +156,10 @@ export class YouTubeAdapter implements SiteAdapter {
         videoPlayer.addEventListener("loadedmetadata", onLoadedMetadata);
 
         danmaku.setVideoEventListeners([
-            { event: "play", listener: onPlay },
-            { event: "pause", listener: onPause },
-            { event: "seeked", listener: onSeek },
-            { event: "loadedmetadata", listener: onLoadedMetadata },
+            {event: "play", listener: onPlay},
+            {event: "pause", listener: onPause},
+            {event: "seeked", listener: onSeek},
+            {event: "loadedmetadata", listener: onLoadedMetadata},
         ]);
 
         if (videoPlayer.readyState >= 1) {
@@ -250,7 +250,7 @@ export class YouTubeAdapter implements SiteAdapter {
                 checkForPlayer();
             });
 
-            observer.observe(document.body, { childList: true, subtree: true });
+            observer.observe(document.body, {childList: true, subtree: true});
         });
     }
 
@@ -265,7 +265,7 @@ export class YouTubeAdapter implements SiteAdapter {
                     resolve(el);
                 }
             });
-            observer.observe(document.body, { childList: true, subtree: true });
+            observer.observe(document.body, {childList: true, subtree: true});
         });
     }
 }

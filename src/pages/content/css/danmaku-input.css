@@ -135,7 +135,6 @@
 
 #custom-color-picker {
     -webkit-appearance: none;
-    -moz-appearance: none;
     appearance: none;
     width: 30px;
     height: 30px;
@@ -232,7 +231,6 @@
 
 .danmaku-input-wrapper:focus-within {
     border-bottom-color: transparent;
-    border-bottom-color: #007bff;
 }
 
 .danmaku-input {
@@ -302,13 +300,11 @@
 }
 
 .danmaku-comment-button:hover {
-    background-color: #2d95e8;
     background-color: #0056b3;
 }
 
 .danmaku-comment-button:active {
     background-color: #065fd4;
-    background-color: #004085;
 }
 
 .danmaku-comment-button:disabled {

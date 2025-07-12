@@ -1,18 +1,14 @@
-/* Crunchyroll-specific styles for VideoDanmaku extension */
 
-/* Danmaku input container styling for Crunchyroll */
 .danmaku-input-container {
     position: relative;
     margin: 10px 0;
     z-index: 1000;
 }
 
-/* Crunchyroll video player adjustments */
 .crunchyroll-video-player {
     position: relative;
 }
 
-/* Danmaku overlay for Crunchyroll */
 .danmaku-overlay {
     position: absolute;
     top: 0;
@@ -23,7 +19,6 @@
     z-index: 100;
 }
 
-/* Danmaku comments styling for Crunchyroll */
 .danmaku-comment {
     position: absolute;
     white-space: nowrap;
@@ -45,14 +40,12 @@
     }
 }
 
-/* Crunchyroll-specific container adjustments */
 .crunchyroll-player-container .danmaku-input-container {
     background: rgba(0, 0, 0, 0.8);
     border-radius: 4px;
     padding: 8px;
 }
 
-/* Input field styling for Crunchyroll theme */
 .crunchyroll-player-container .danmaku-input {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid #ff6b00;
@@ -68,7 +61,6 @@
     box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
 }
 
-/* Submit button styling for Crunchyroll theme */
 .crunchyroll-player-container .danmaku-submit {
     background: #ff6b00;
     color: white;

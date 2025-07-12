@@ -29,31 +29,31 @@ export interface AuthResponse {
     token?: string;
     error?: string;
     message?: string;
-    user?: any;
     status?: number;
 }
 
-export interface ReportRequest {
-    commentId: number;
-    reason: string;
-    additionalDetails?: string;
-}
-
-export interface ReportResponse {
-    success: boolean;
-    error?: string;
-    message?: string;
-}
+// export interface ReportRequest {
+//     commentId: number;
+//     reason: string;
+//     additionalDetails?: string;
+// }
+//
+// export interface ReportResponse {
+//     success: boolean;
+//     error?: string;
+//     message?: string;
+// }
 
 export async function getComments(platform: string, videoId: string, commentLimit: number): Promise<Comment[]> {
     try {
-        console.log("getComments called with:", { platform, videoId, commentLimit });
+        console.log("getComments called with:", {platform, videoId, commentLimit});
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${commentLimit}`;
         console.log("Fetching from URL:", url);
         const response = await fetch(url);
         console.log("Response status:", response.status, "ok:", response.ok);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error(Error(`HTTP error! status: ${response.status}`));
+            return [];
         }
         const data = await response.json();
         console.log("Response data:", data);
@@ -111,9 +111,11 @@ export async function postComment(
             if (response.status === 401) {
                 console.error("Authentication failed. Please login again.");
                 // Optionally remove invalid token
-                chrome.storage.local.remove("authToken");
+                await chrome.storage.local.remove("authToken");
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error("Authentication failed. " + await response.json());
+            return false;
+            // throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         return data.success;
@@ -139,7 +141,6 @@ export async function login(loginData: LoginRequest): Promise<AuthResponse> {
             return {
                 success: true,
                 token: data.token,
-                user: data.user,
             };
         } else {
             return {
@@ -173,7 +174,6 @@ export async function signup(signupData: SignupRequest): Promise<AuthResponse> {
             return {
                 success: true,
                 message: data.message,
-                user: data.user,
             };
         } else {
             return {
@@ -225,9 +225,11 @@ export async function reportComment(
         if (!response.ok) {
             if (response.status === 401) {
                 console.error("Authentication failed. Please login again.");
-                chrome.storage.local.remove("authToken");
+                await chrome.storage.local.remove("authToken");
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error("Authentication failed. " + await response.json());
+            // throw new Error(`HTTP error! status: ${response.status}`);
+            return false;
         }
 
         const data = await response.json();

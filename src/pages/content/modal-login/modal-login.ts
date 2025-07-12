@@ -1,4 +1,4 @@
-import { login, signup, type LoginRequest, type SignupRequest } from "../api";
+import {login, type LoginRequest, signup, type SignupRequest} from "../api";
 import "../css/modal-login.css";
 
 export class LoginModal {
@@ -292,9 +292,9 @@ export class LoginModal {
             const passwordInput = document.getElementById("danmaku-password") as HTMLInputElement;
 
             const isValid = emailUsernameInput?.value.trim() &&
-                           passwordInput?.value &&
-                           !emailUsernameInput?.classList.contains("error") &&
-                           !passwordInput?.classList.contains("error");
+                passwordInput?.value &&
+                !emailUsernameInput?.classList.contains("error") &&
+                !passwordInput?.classList.contains("error");
 
             loginBtn.disabled = !isValid;
         }
@@ -306,13 +306,13 @@ export class LoginModal {
             const confirmInput = document.getElementById("danmaku-confirm-password") as HTMLInputElement;
 
             const isValid = emailInput?.value.trim() &&
-                           usernameInput?.value.trim() &&
-                           passwordInput?.value &&
-                           confirmInput?.value &&
-                           !emailInput?.classList.contains("error") &&
-                           !usernameInput?.classList.contains("error") &&
-                           !passwordInput?.classList.contains("error") &&
-                           !confirmInput?.classList.contains("error");
+                usernameInput?.value.trim() &&
+                passwordInput?.value &&
+                confirmInput?.value &&
+                !emailInput?.classList.contains("error") &&
+                !usernameInput?.classList.contains("error") &&
+                !passwordInput?.classList.contains("error") &&
+                !confirmInput?.classList.contains("error");
 
             signupBtn.disabled = !isValid;
         }
@@ -374,7 +374,7 @@ export class LoginModal {
         const result = await login(loginData);
 
         if (result.success && result.token) {
-            chrome.storage.local.set({ authToken: result.token });
+            chrome.storage.local.set({authToken: result.token});
             this.closeModal();
             this.dispatchLoginSuccess();
         } else {
@@ -429,7 +429,7 @@ export class LoginModal {
         const result = await login(loginData);
 
         if (result.success && result.token) {
-            chrome.storage.local.set({ authToken: result.token });
+            chrome.storage.local.set({authToken: result.token});
             this.closeModal();
             this.dispatchLoginSuccess();
         } else {

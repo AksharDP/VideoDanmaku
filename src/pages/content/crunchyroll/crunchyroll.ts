@@ -1,8 +1,8 @@
-import { Danmaku } from "../danmaku/danmaku";
-import { DanmakuInput } from "../danmaku/danmakuInput";
-import { getComments } from "../api";
-import { LoginModal } from "../modal-login/modal-login";
-import { SiteAdapter } from "../interfaces/SiteAdapter";
+import {Danmaku} from "../danmaku/danmaku";
+import {DanmakuInput} from "../danmaku/danmakuInput";
+// import { getComments } from "../api";
+import {LoginModal} from "../modal-login/modal-login";
+import {SiteAdapter} from "../interfaces/SiteAdapter";
 import danmakuHtml from "../danmaku/danmakuInput.html?raw";
 import crunchyrollCss from "../css/sites/crunchyroll.css?raw";
 import danmakuCss from "../css/danmaku.css?raw";
@@ -95,7 +95,7 @@ export class CrunchyrollAdapter implements SiteAdapter {
     }
 
     public getVideoId(): string | null {
-        const match = window.location.pathname.match(/\/watch\/([^\/]+)/);
+        const match = window.location.pathname.match(/\/watch\/([^/]+)/);
         return match ? match[1] : null;
     }
 
@@ -116,9 +116,9 @@ export class CrunchyrollAdapter implements SiteAdapter {
         videoPlayer.addEventListener("seeked", seekedListener);
 
         this.danmaku?.setVideoEventListeners([
-            { event: "play", listener: playListener },
-            { event: "pause", listener: pauseListener },
-            { event: "seeked", listener: seekedListener },
+            {event: "play", listener: playListener},
+            {event: "pause", listener: pauseListener},
+            {event: "seeked", listener: seekedListener},
         ]);
 
         this.resizeObserver = new ResizeObserver(() => {
@@ -166,24 +166,24 @@ export class CrunchyrollAdapter implements SiteAdapter {
 
         // this.setupEventListeners(this.videoPlayer, this.danmaku);
 
-        const videoDuration = this.videoPlayer.duration / 60 || 0;
-        const limit =
-            videoDuration < 1
-                ? 200
-                : videoDuration < 5
-                ? 1000
-                : videoDuration < 10
-                ? 2000
-                : videoDuration < 30
-                ? 12000
-                : 32000;
+        // const videoDuration = this.videoPlayer.duration / 60 || 0;
+        // const limit =
+        //     videoDuration < 1
+        //         ? 200
+        //         : videoDuration < 5
+        //             ? 1000
+        //             : videoDuration < 10
+        //                 ? 2000
+        //                 : videoDuration < 30
+        //                     ? 12000
+        //                     : 32000;
 
         // this.danmaku.loadDanmakuComments("youtube", videoId, limit);
     }
 
     private async setupDanmakuInput(
         videoId: string,
-        videoTitle: string
+        // videoTitle: string
     ): Promise<void> {
         if (
             !this.danmakuInputContainer ||
