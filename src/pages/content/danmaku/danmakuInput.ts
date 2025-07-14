@@ -92,6 +92,16 @@ export class DanmakuInput {
         return this.container;
     }
 
+    public clearInputText(): void {
+        if (this.inputField) {
+            console.log("Clearing existing text in input field");
+            this.inputField.value = "";
+            this.handleInput();
+        } else {
+            console.error("DanmakuInput: Input field not found.");
+        }
+    }
+
     public updateCommentsCount(count: number): void {
         const commentsLoadedEl = this.container.querySelector<HTMLElement>(
             "#danmaku-comments-loaded"
@@ -157,8 +167,10 @@ export class DanmakuInput {
 
         this.toggleButton.addEventListener("click", () => {
             const isEnabled = this.danmaku.toggleVisibility();
+            console.log("Danmaku visibility toggled: ", isEnabled);
             chrome.storage.local.set({danmakuEnabled: isEnabled});
             this.updateCommentsStatus(isEnabled, this.danmaku.getCommentsCount);
+
         });
 
         document.addEventListener("click", (e) => {
@@ -255,14 +267,14 @@ export class DanmakuInput {
             this.currentCharCount.textContent = charCount.toString();
         }
 
-        if (this.charCountContainer) {
-            const maxCountText = `/${this.MAX_CHARS}`;
-            if (!this.charCountContainer.textContent?.includes(maxCountText)) {
-                this.charCountContainer.appendChild(
-                    document.createTextNode(maxCountText)
-                );
-            }
-        }
+        // if (this.charCountContainer) {
+        //     const maxCountText = `/${this.MAX_CHARS}`;
+        //     if (!this.charCountContainer.textContent?.includes(maxCountText)) {
+        //         this.charCountContainer.appendChild(
+        //             document.createTextNode(maxCountText)
+        //         );
+        //     }
+        // }
 
         if (charCount > this.MAX_CHARS) {
             this.inputField.classList.add("error");

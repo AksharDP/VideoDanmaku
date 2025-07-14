@@ -43,7 +43,6 @@ export class YouTubeAdapter implements SiteAdapter {
                 `New video detected: ${newVideoId}. Initializing or re-initializing.`
             );
             this.videoId = newVideoId;
-
             this.videoPlayer = await this.waitForPlayer();
 
             if (!this.videoPlayer) {
@@ -52,62 +51,90 @@ export class YouTubeAdapter implements SiteAdapter {
             }
 
             if (!this.isInitialized) {
-                console.log("First-time initialization.");
-                this.danmakuContainer = document.createElement("div");
-                this.danmakuContainer.classList.add("danmaku-container");
-                this.videoPlayer.parentElement?.insertBefore(
-                    this.danmakuContainer,
-                    this.videoPlayer.nextSibling
-                );
-
-                this.danmaku = new Danmaku(
-                    this.videoPlayer,
-                    this.danmakuContainer
-                );
-                this.danmakuInputInstance = new DanmakuInput(
-                    this.danmaku,
-                    this.loginModal,
-                    this.videoId
-                );
-
-                const danmakuInputElement = this.danmakuInputInstance.init();
-                await this.setupDanmakuInput(danmakuInputElement);
-
-                await this.setupEventListeners(this.videoPlayer, this.danmaku);
-                this.isInitialized = true;
-                console.log("Danmaku system initialized for the first time.");
+                await this.handleFirstTimeInitialization();
             } else {
-                console.log("Re-initializing for new video.");
-                this.danmaku!.reinitialize(this.videoPlayer);
-                this.danmakuInputInstance!.updateVideoId(this.videoId);
-
-                if (
-                    this.danmakuContainer &&
-                    !this.danmakuContainer.parentElement
-                ) {
-                    this.videoPlayer.parentElement?.insertBefore(
-                        this.danmakuContainer,
-                        this.videoPlayer.nextSibling
-                    );
-                }
-                if (
-                    this.danmakuInputContainer &&
-                    !this.danmakuInputContainer.parentElement
-                ) {
-                    const belowPlayer = await this.waitForElement("#below");
-                    if (belowPlayer) {
-                        belowPlayer.prepend(this.danmakuInputContainer);
-                    }
-                }
-
-                await this.setupEventListeners(this.videoPlayer, this.danmaku!);
-                console.log("Danmaku system re-initialized for new video.");
+                await this.handleReinitialization();
             }
         } else if (newVideoId && !this.videoPlayer) {
-            console.log("Player not found, attempting to re-initialize.");
+            console.error("Player not found");
             this.isInitialized = false;
             this.videoId = null;
-            this.initializeDanmaku();
+        }
+    }
+
+    private async handleFirstTimeInitialization(): Promise<void> {
+        console.log("First-time initialization.");
+        this.danmakuContainer = document.createElement("div");
+        this.danmakuContainer.classList.add("danmaku-container");
+        this.videoPlayer!.parentElement?.insertBefore(
+            this.danmakuContainer,
+            this.videoPlayer!.nextSibling
+        );
+
+        this.danmaku = new Danmaku(
+            this.videoPlayer!,
+            this.danmakuContainer
+        );
+        this.danmakuInputInstance = new DanmakuInput(
+            this.danmaku,
+            this.loginModal,
+            this.videoId!
+        );
+
+        const danmakuInputElement = this.danmakuInputInstance.init();
+        await this.setupDanmakuInput(danmakuInputElement);
+
+        await this.setupEventListeners(this.videoPlayer!, this.danmaku);
+        this.isInitialized = true;
+        console.log("Danmaku system initialized for the first time.");
+    }
+
+    private async handleReinitialization(): Promise<void> {
+        console.log("Re-initializing for new video.");
+        this.danmaku!.reinitialize(this.videoPlayer!);
+        this.danmakuInputInstance!.updateVideoId(this.videoId!);
+
+        if (
+            this.danmakuContainer &&
+            !this.danmakuContainer.parentElement
+        ) {
+            this.videoPlayer!.parentElement?.insertBefore(
+                this.danmakuContainer,
+                this.videoPlayer!.nextSibling
+            );
+        }
+        if (
+            this.danmakuInputContainer &&
+            !this.danmakuInputContainer.parentElement
+        ) {
+            const belowPlayer = await this.waitForElement("#below");
+            if (belowPlayer) {
+                belowPlayer.prepend(this.danmakuInputContainer);
+            }
+        }
+
+        this.danmakuInputInstance?.clearInputText();
+
+        await this.setupEventListeners(this.videoPlayer!, this.danmaku!);
+        console.log("Danmaku system re-initialized for new video.");
+    }
+
+    public async loadComments(): Promise<void> {
+        if (!this.videoPlayer || !this.danmaku) return;
+
+        console.log("Video metadata loaded. Loading comments.");
+        const videoDuration = this.videoPlayer.duration / 60;
+        const limit =
+            videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
+
+        console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
+        const comments = await getComments("youtube", this.videoId!, limit);
+        console.log("Received comments:", comments.length);
+        this.danmaku.setComments(comments);
+        this.danmakuInputInstance!.updateCommentsCount(comments.length);
+
+        if (!this.videoPlayer.paused) {
+            this.danmaku.play();
         }
     }
 
@@ -132,21 +159,7 @@ export class YouTubeAdapter implements SiteAdapter {
                     this.danmakuInputInstance!.updateCommentsStatus(true, danmaku.getCommentsCount);
                     return;
                 }
-
-                console.log("Video metadata loaded. Loading comments.");
-                const videoDuration = videoPlayer.duration / 60;
-                const limit =
-                    videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
-
-                console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
-                const comments = await getComments("youtube", this.videoId!, limit);
-                console.log("Received comments:", comments.length);
-                danmaku.setComments(comments);
-                this.danmakuInputInstance!.updateCommentsCount(comments.length);
-
-                if (!videoPlayer.paused) {
-                    danmaku.play();
-                }
+                await this.loadComments();
             });
         };
 
@@ -166,7 +179,7 @@ export class YouTubeAdapter implements SiteAdapter {
             console.log(
                 "Video metadata was already loaded. Manually triggering comment load."
             );
-            onLoadedMetadata();
+            await onLoadedMetadata();
         }
 
         if (this.resizeObserver && this.videoElementForObserver) {
