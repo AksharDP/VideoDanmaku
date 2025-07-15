@@ -29,31 +29,37 @@ export interface AuthResponse {
     token?: string;
     error?: string;
     message?: string;
+    user?: any;
     status?: number;
 }
 
-// export interface ReportRequest {
-//     commentId: number;
-//     reason: string;
-//     additionalDetails?: string;
-// }
-//
-// export interface ReportResponse {
-//     success: boolean;
-//     error?: string;
-//     message?: string;
-// }
+export interface ReportRequest {
+    commentId: number;
+    reason: string;
+    additionalDetails?: string;
+}
+
+export interface ReportResponse {
+    success: boolean;
+    error?: string;
+    message?: string;
+}
+
+export interface PostCommentResponse {
+    success: boolean;
+    error?: string;
+    status?: number;
+}
 
 export async function getComments(platform: string, videoId: string, commentLimit: number): Promise<Comment[]> {
     try {
-        console.log("getComments called with:", {platform, videoId, commentLimit});
+        console.log("getComments called with:", { platform, videoId, commentLimit });
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${commentLimit}`;
         console.log("Fetching from URL:", url);
         const response = await fetch(url);
         console.log("Response status:", response.status, "ok:", response.ok);
         if (!response.ok) {
-            console.error(Error(`HTTP error! status: ${response.status}`));
-            return [];
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         console.log("Response data:", data);
@@ -77,7 +83,7 @@ export async function postComment(
     color: string,
     scrollMode: "slide" | "top" | "bottom",
     fontSize: "small" | "normal" | "large"
-): Promise<boolean> {
+): Promise<PostCommentResponse> {
     try {
         const token = await new Promise<string | null>((resolve) => {
             chrome.storage.local.get("authToken", (result) => {
@@ -86,8 +92,7 @@ export async function postComment(
         });
 
         if (!token) {
-            console.error("No auth token found. Please login.");
-            return false;
+            return { success: false, error: "You must be logged in to comment." };
         }
 
         const url = `${API_BASE_URL}/addComment`;
@@ -107,21 +112,20 @@ export async function postComment(
                 fontSize,
             }),
         });
+        const data = await response.json();
         if (!response.ok) {
             if (response.status === 401) {
-                console.error("Authentication failed. Please login again.");
-                // Optionally remove invalid token
-                await chrome.storage.local.remove("authToken");
+                chrome.storage.local.remove("authToken");
             }
-            console.error("Authentication failed. " + await response.json());
-            return false;
-            // throw new Error(`HTTP error! status: ${response.status}`);
+            return { success: false, error: data.error || `HTTP error!`, status: response.status };
         }
-        const data = await response.json();
-        return data.success;
+        return { success: data.success };
     } catch (error) {
         console.error("Failed to post comment:", error);
-        return false;
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
+        return { success: false, error: "An unknown error occurred." };
     }
 }
 
@@ -141,6 +145,7 @@ export async function login(loginData: LoginRequest): Promise<AuthResponse> {
             return {
                 success: true,
                 token: data.token,
+                user: data.user,
             };
         } else {
             return {
@@ -174,6 +179,7 @@ export async function signup(signupData: SignupRequest): Promise<AuthResponse> {
             return {
                 success: true,
                 message: data.message,
+                user: data.user,
             };
         } else {
             return {
@@ -225,11 +231,9 @@ export async function reportComment(
         if (!response.ok) {
             if (response.status === 401) {
                 console.error("Authentication failed. Please login again.");
-                await chrome.storage.local.remove("authToken");
+                chrome.storage.local.remove("authToken");
             }
-            console.error("Authentication failed. " + await response.json());
-            // throw new Error(`HTTP error! status: ${response.status}`);
-            return false;
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();

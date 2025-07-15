@@ -1,6 +1,6 @@
-import {Comment, postComment} from "../api";
-import {Danmaku} from "./danmaku";
-import {LoginModal} from "../modal-login/modal-login";
+import { postComment, Comment, PostCommentResponse } from "../api";
+import { Danmaku } from "./danmaku";
+import { LoginModal } from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
 
 export class DanmakuInput {
@@ -17,6 +17,7 @@ export class DanmakuInput {
     private charCountContainer!: HTMLElement;
     private currentCharCount!: HTMLElement;
     private toggleButton!: HTMLButtonElement;
+    private errorMessageElement!: HTMLParagraphElement;
 
     private colorBoxes!: NodeListOf<HTMLElement>;
     private customColorPicker!: HTMLInputElement;
@@ -73,12 +74,14 @@ export class DanmakuInput {
         this.positionOptions =
             this.styleMenu.querySelectorAll(".position-option");
 
+        this.errorMessageElement = this.container.querySelector("#danmaku-error-message")!;
+
         this.setupEventListeners();
         this.updateUIBasedOnAuth();
         this.updateSelectedColorUI(this.selectedColor);
         this.updateSelectedPositionUI(this.selectedPosition);
 
-        chrome.storage.local.get("danmakuEnabled", ({danmakuEnabled}) => {
+        chrome.storage.local.get("danmakuEnabled", ({ danmakuEnabled }) => {
             const isEnabled = danmakuEnabled !== false;
             this.updateToggleButton(isEnabled);
             this.danmaku.toggleVisibility(isEnabled);
@@ -90,16 +93,6 @@ export class DanmakuInput {
 
     public get containerDiv(): HTMLElement {
         return this.container;
-    }
-
-    public clearInputText(): void {
-        if (this.inputField) {
-            console.log("Clearing existing text in input field");
-            this.inputField.value = "";
-            this.handleInput();
-        } else {
-            console.error("DanmakuInput: Input field not found.");
-        }
     }
 
     public updateCommentsCount(count: number): void {
@@ -152,12 +145,6 @@ export class DanmakuInput {
         );
         this.loginPrompt.addEventListener("click", () => this.openLoginPage());
         this.inputField.addEventListener("input", () => this.handleInput());
-        this.inputField.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                this.handleCommentButtonClick();
-            }
-        });
 
         this.styleButton.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -167,10 +154,8 @@ export class DanmakuInput {
 
         this.toggleButton.addEventListener("click", () => {
             const isEnabled = this.danmaku.toggleVisibility();
-            console.log("Danmaku visibility toggled: ", isEnabled);
-            chrome.storage.local.set({danmakuEnabled: isEnabled});
+            chrome.storage.local.set({ danmakuEnabled: isEnabled });
             this.updateCommentsStatus(isEnabled, this.danmaku.getCommentsCount);
-
         });
 
         document.addEventListener("click", (e) => {
@@ -257,6 +242,7 @@ export class DanmakuInput {
     }
 
     private handleInput() {
+        this.clearError();
         const charCount = this.inputField.value.length;
         this.charCountContainer.style.display =
             document.activeElement === this.inputField || charCount > 0
@@ -267,14 +253,14 @@ export class DanmakuInput {
             this.currentCharCount.textContent = charCount.toString();
         }
 
-        // if (this.charCountContainer) {
-        //     const maxCountText = `/${this.MAX_CHARS}`;
-        //     if (!this.charCountContainer.textContent?.includes(maxCountText)) {
-        //         this.charCountContainer.appendChild(
-        //             document.createTextNode(maxCountText)
-        //         );
-        //     }
-        // }
+        if (this.charCountContainer) {
+            const maxCountText = `/${this.MAX_CHARS}`;
+            if (!this.charCountContainer.textContent?.includes(maxCountText)) {
+                this.charCountContainer.appendChild(
+                    document.createTextNode(maxCountText)
+                );
+            }
+        }
 
         if (charCount > this.MAX_CHARS) {
             this.inputField.classList.add("error");
@@ -296,7 +282,7 @@ export class DanmakuInput {
         if (!content) return;
 
         const currentTime = this.danmaku.getCurrentTime;
-        const success = await postComment(
+        const response: PostCommentResponse = await postComment(
             "youtube",
             this.videoId,
             currentTime,
@@ -306,7 +292,7 @@ export class DanmakuInput {
             "normal"
         );
 
-        if (success) {
+        if (response.success) {
             const localComment: Comment = {
                 id: Date.now(),
                 content: content,
@@ -321,13 +307,23 @@ export class DanmakuInput {
             this.inputField.value = "";
             this.handleInput();
         } else {
-            alert("Failed to post comment. You might need to log in again.");
+            this.showError(response.error, response.status);
             this.updateUIBasedOnAuth();
         }
     }
 
     private openLoginPage() {
         this.loginModal.show();
+    }
+
+    private showError(message: string = "An unexpected error occurred.", status?: number) {
+        this.errorMessageElement.textContent = `Error ${status ? `${status} `: ''}: ${message}`;
+        this.errorMessageElement.style.display = "block";
+    }
+
+    private clearError() {
+        this.errorMessageElement.textContent = "";
+        this.errorMessageElement.style.display = "none";
     }
 
     private async updateUIBasedOnAuth() {

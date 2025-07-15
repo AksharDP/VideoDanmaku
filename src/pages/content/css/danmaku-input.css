@@ -372,3 +372,13 @@
 .toggle-indicator.toggle-disabled {
     display: none;
 }
+
+.danmaku-error-message {
+    display: none;
+    color: red;
+    white-space: nowrap;
+    font-size: 14px;
+    padding: 0 8px;
+    margin: 0 0 0 auto;
+    align-self: center;
+}
