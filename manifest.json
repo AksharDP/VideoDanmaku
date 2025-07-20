@@ -1,45 +1,45 @@
 {
-  "manifest_version": 3,
-  "name": "VideoDanmaku",
-  "description": "A simple extension for adding danmaku to YouTube videos.",
-  "action": {
-    "default_icon": {
-      "32": "icon-32.png"
-    }
-  },
-  "icons": {
-    "128": "icon-128.png"
-  },
-  "permissions": [
-    "activeTab",
-    "storage"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "https://www.youtube.com/*",
-        "https://www.crunchyroll.com/watch/*"
-      ],
-      "js": [
-        "src/pages/content/index.tsx"
-      ],
-      "css": [
-        "contentStyle.css"
-      ]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "contentStyle.css",
-        "src/pages/content/modal-login/modal-login.html",
-        "src/pages/content/danmaku/danmakuinput.html",
-        "src/pages/content/modal-report/modal-report.html"
-      ],
-      "matches": [
-        "https://www.youtube.com/*",
-        "https://www.crunchyroll.com/*"
-      ]
-    }
-  ]
+	"manifest_version": 3,
+	"name": "VideoDanmaku",
+	"description": "A simple extension for adding danmaku to YouTube videos.",
+	"action": {
+		"default_icon": {
+			"32": "icon-32.png"
+		}
+	},
+	"icons": {
+		"128": "icon-128.png"
+	},
+	"permissions": [
+		"activeTab",
+		"storage"
+	],
+	"content_scripts": [
+		{
+			"matches": [
+				"https://www.youtube.com/*",
+				"https://www.crunchyroll.com/watch/*"
+			],
+			"js": [
+				"src/pages/content/index.tsx"
+			],
+			"css": [
+				"contentStyle.css"
+			]
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": [
+				"contentStyle.css",
+				"src/pages/content/modal-login/modal-login.html",
+				"src/pages/content/modal-report/modal-report.html",
+				"src/pages/content/danmaku/danmakuinput.html"
+			],
+			"matches": [
+				"https://www.youtube.com/*",
+				"https://www.crunchyroll.com/*"
+			]
+		}
+	]
 }

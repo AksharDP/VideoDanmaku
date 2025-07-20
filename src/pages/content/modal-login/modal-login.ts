@@ -49,7 +49,7 @@ export class LoginModal {
 
     private async loadAndAppendForm(): Promise<void> {
         try {
-            const response = await fetch(chrome.runtime.getURL('src/pages/content/login-modal/login-modal.html'));
+            const response = await fetch(chrome.runtime.getURL('src/pages/content/modal-login/modal-login.html'));
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
