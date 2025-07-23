@@ -39,6 +39,11 @@ export class Danmaku {
     private static readonly LANE_HEIGHT = 30;
     private static readonly FONT_SIZE = 24;
 
+    // Settings properties
+    private speedMultiplier: number = 1;
+    private opacityLevel: number = 1;
+    private fontSizeMultiplier: number = 1;
+
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
         this.container = container;
@@ -411,4 +416,35 @@ export class Danmaku {
                 return this.bottomLanes;
         }
     }
+
+    // Settings methods
+    public setSpeed(percent: number): void {
+        this.speedMultiplier = percent / 100;
+        // Apply speed to all active comments
+        this.activeComments.forEach((comment) => {
+            if (comment.scrollMode === "slide") {
+                const containerWidth = this.container.offsetWidth;
+                comment.speed = (containerWidth + comment.width) / Danmaku.DURATION * this.speedMultiplier;
+            }
+        });
+    }
+
+    public setOpacity(percent: number): void {
+        this.opacityLevel = percent / 100;
+        this.container.style.opacity = this.opacityLevel.toString();
+    }
+
+    public setFontSize(percent: number): void {
+        this.fontSizeMultiplier = percent / 100;
+        const newFontSize = Danmaku.FONT_SIZE * this.fontSizeMultiplier;
+
+        // Apply font size to all active comments
+        this.activeComments.forEach((comment) => {
+            comment.element.style.fontSize = `${newFontSize}px`;
+        });
+
+        // Update CSS custom property for future comments
+        this.container.style.setProperty('--danmaku-font-size', `${newFontSize}px`);
+    }
+
 }

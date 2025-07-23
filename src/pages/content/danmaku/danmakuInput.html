@@ -230,6 +230,130 @@
                 </div>
             </div>
         </div>
+
+        <button class="danmaku-settings-button">
+            Settings
+            <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="chevron-icon chevron-down"
+            >
+                <path d="m6 9 6 6 6-6"/>
+            </svg>
+        </button>
+        <div class="danmaku-settings-menu">
+            <div class="settings-section">
+                <div class="settings-section-title">Barrage Density</div>
+                <div class="density-selector">
+                    <button
+                            class="density-option"
+                            data-density="sparse"
+                            title="Sparse"
+                    >
+                        <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-minus"
+                        >
+                            <path d="M5 12h14"/>
+                        </svg>
+                    </button>
+                    <button
+                            class="density-option selected-density"
+                            data-density="normal"
+                            title="Normal"
+                    >
+                        <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-equal"
+                        >
+                            <line x1="3" x2="21" y1="6" y2="6"/>
+                            <line x1="3" x2="21" y1="12" y2="12"/>
+                            <line x1="3" x2="21" y1="18" y2="18"/>
+                        </svg>
+                    </button>
+                    <button
+                            class="density-option"
+                            data-density="dense"
+                            title="Dense"
+                    >
+                        <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-plus"
+                        >
+                            <path d="M5 12h14"/>
+                            <path d="M12 5v14"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">Barrage Speed</div>
+                <div class="slider-container">
+                    <label for="danmaku-speed-slider"></label>
+                    <input type="range" id="danmaku-speed-slider" min="0" max="200" value="100" class="slider">
+                    <div class="slider-labels">
+                        <span>0%</span>
+                        <span>200%</span>
+                        <span id="danmaku-speed-value" class="slider-current-value">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">Opacity</div>
+                <div class="slider-container">
+                    <label for="danmaku-opacity-slider"></label>
+                    <input type="range" id="danmaku-opacity-slider" min="0" max="100" value="100" class="slider">
+                    <div class="slider-labels">
+                        <span>0%</span>
+                        <span>100%</span>
+                        <span id="danmaku-opacity-value" class="slider-current-value">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">Font Size</div>
+                <div class="slider-container">
+                    <label for="danmaku-fontsize-slider"></label>
+                    <input type="range" id="danmaku-fontsize-slider" min="0" max="200" value="100" class="slider">
+                    <div class="slider-labels">
+                        <span>0%</span>
+                        <span>200%</span>
+                        <span id="danmaku-fontsize-value" class="slider-current-value">100%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <p id="danmaku-error-message" class="danmaku-error-message"></p>
     </div>
 </div>

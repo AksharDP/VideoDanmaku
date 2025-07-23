@@ -16,29 +16,34 @@
 } */
 
 .danmaku-toggle-button,
-.danmaku-style-button {
+.danmaku-style-button,
+.danmaku-settings-button {
     background: transparent;
     border: 1px solid var(--yt-spec-10-percent-layer);
     color: var(--yt-spec-text-primary);
 }
 
 .danmaku-toggle-button:hover,
-.danmaku-style-button:hover {
+.danmaku-style-button:hover,
+.danmaku-settings-button:hover {
     background-color: var(--yt-spec-10-percent-layer);
 }
 
-.danmaku-style-button.open {
+.danmaku-style-button.open,
+.danmaku-settings-button.open {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: #007bff;
 }
 
-.danmaku-style-menu {
+.danmaku-style-menu,
+.danmaku-settings-menu {
     background: var(--yt-spec-raised-background);
     border: 1px solid var(--yt-spec-10-percent-layer);
     color: var(--yt-spec-text-primary);
 }
 
-.style-section-title {
+.style-section-title,
+.settings-section-title {
     color: var(--yt-spec-text-primary);
 }
 
