@@ -361,22 +361,43 @@ export class Danmaku {
             } 
             // If we can't display the comment yet (no available lanes), try to find a later comment we can display
             else if (timeDiff >= 0 && !this.canDisplayComment(comment)) {
-                // Look for a comment later in the queue that can be displayed
+                // Look for a later comment that can be displayed
                 let foundLaterComment = false;
-                for (let i = 1; i < this.comments.length; i++) {
-                    const laterComment = this.comments[i];
-                    const laterTimeDiff = currentTime - laterComment.time;
-                    
-                    // If later comment is within allowable delay and can be displayed
-                    if (laterTimeDiff >= 0 && 
-                        laterTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000 && 
-                        this.canDisplayComment(laterComment)) {
-                        
-                        // Remove and display the later comment
-                        this.comments.splice(i, 1);
-                        this.emitComment(laterComment);
-                        foundLaterComment = true;
-                        break;
+                let earliestAvailableTime = Infinity;
+                
+                // First pass: find the earliest time when a lane will be available
+                const now = performance.now();
+                for (const mode of ['slide', 'top', 'bottom'] as const) {
+                    const lanes = this.getLanesForMode(mode);
+                    for (const laneTime of lanes) {
+                        if (laneTime > now && laneTime < earliestAvailableTime) {
+                            earliestAvailableTime = laneTime;
+                        }
+                    }
+                }
+                
+                // If we found a time when a lane will be available within our delay limit
+                if (earliestAvailableTime !== Infinity) {
+                    const availableTimeDiff = (earliestAvailableTime - now) / 1000;
+                    if (availableTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000) {
+                        // Look for any comment that could be displayed at that time
+                        for (let i = 0; i < this.comments.length; i++) {
+                            const laterComment = this.comments[i];
+                            const laterTimeDiff = currentTime - laterComment.time;
+                            
+                            // If the comment is within our time window and could be displayed when lanes are available
+                            if (laterTimeDiff >= -availableTimeDiff && 
+                                laterTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000) {
+                                
+                                // Check if we can display this comment (it might be able to use a different lane)
+                                if (this.canDisplayComment(laterComment)) {
+                                    this.comments.splice(i, 1);
+                                    this.emitComment(laterComment);
+                                    foundLaterComment = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
                 
