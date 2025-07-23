@@ -401,6 +401,7 @@ export class Danmaku {
         this.container.appendChild(danmakuElement);
         const commentWidth = danmakuElement.offsetWidth;
 
+        const now = performance.now();
         const danmakuComment: DanmakuComment = {
             ...comment,
             y: lane * Danmaku.LANE_HEIGHT,
@@ -408,7 +409,7 @@ export class Danmaku {
             speed: 0,
             width: commentWidth,
             lane,
-            expiry: performance.now() + Danmaku.DURATION * 1000,
+            expiry: now + Danmaku.DURATION * 1000,
             element: danmakuElement,
             isPaused: false,
         };
@@ -431,9 +432,9 @@ export class Danmaku {
                 danmakuComment.x = containerWidth - distanceTraveled;
                 danmakuElement.style.top = `${danmakuComment.y}px`;
                 danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
-                this.slidingLanes[lane] =
-                    performance.now() +
-                    (commentWidth / danmakuComment.speed) * 1000;
+                
+                // Set the lane availability time based on the time it takes for the comment to clear the lane
+                this.slidingLanes[lane] = now + (commentWidth / danmakuComment.speed) * 1000;
                 break; }
             case "top":
                 danmakuElement.style.top = `${danmakuComment.y}px`;
@@ -477,9 +478,15 @@ export class Danmaku {
             return true;
         }
         
-        // Check density settings to see if we can use this lane
-        const timeUntilAvailable = lanes[laneIndex] - now;
-        return timeUntilAvailable <= this.densityDelay;
+        // For dense mode, always allow comments (no delay)
+        if (this.densityMode === "dense") {
+            return true;
+        }
+        
+        // For sparse and normal modes, check if enough time has passed
+        // We need to ensure the full density delay has passed since the last comment
+        const timeSinceLastComment = now - lanes[laneIndex];
+        return timeSinceLastComment >= (this.densityDelay - 100); // Small buffer for timing precision
     }
 
     private getLanesForMode(mode: "slide" | "top" | "bottom"): number[] {
