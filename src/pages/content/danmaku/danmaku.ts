@@ -38,6 +38,7 @@ export class Danmaku {
     private static readonly DURATION = 7;
     private static readonly LANE_HEIGHT = 30;
     private static readonly FONT_SIZE = 24;
+    private static readonly MAX_COMMENT_DELAY = 5000; // Maximum 5 seconds delay for comments
 
     private resizeObserver: ResizeObserver | null = null;
     private lastVideoRect: DOMRect | null = null;
@@ -343,13 +344,65 @@ export class Danmaku {
 
     private emitNewComments(): void {
         const currentTime = this.videoPlayer.currentTime;
-        while (
-            this.comments.length > 0 &&
-            this.comments[0].time <= currentTime
-        ) {
-            const comment = this.comments.shift()!;
-            this.emitComment(comment);
+        
+        // Process comments that are due to be displayed
+        while (this.comments.length > 0) {
+            const comment = this.comments[0];
+            const timeDiff = currentTime - comment.time;
+            
+            // If comment is within the allowable delay window and we can display it, do so
+            if (timeDiff >= 0 && this.canDisplayComment(comment)) {
+                this.comments.shift();
+                this.emitComment(comment);
+            } 
+            // If comment is more than MAX_COMMENT_DELAY past its time, skip it
+            else if (timeDiff > Danmaku.MAX_COMMENT_DELAY / 1000) {
+                this.comments.shift();
+            } 
+            // If we can't display the comment yet (no available lanes), try to find a later comment we can display
+            else if (timeDiff >= 0 && !this.canDisplayComment(comment)) {
+                // Look for a comment later in the queue that can be displayed
+                let foundLaterComment = false;
+                for (let i = 1; i < this.comments.length; i++) {
+                    const laterComment = this.comments[i];
+                    const laterTimeDiff = currentTime - laterComment.time;
+                    
+                    // If later comment is within allowable delay and can be displayed
+                    if (laterTimeDiff >= 0 && 
+                        laterTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000 && 
+                        this.canDisplayComment(laterComment)) {
+                        
+                        // Remove and display the later comment
+                        this.comments.splice(i, 1);
+                        this.emitComment(laterComment);
+                        foundLaterComment = true;
+                        break;
+                    }
+                }
+                
+                // If we couldn't find a later comment to display, we have to wait
+                if (!foundLaterComment) {
+                    break;
+                }
+            } 
+            else {
+                // Comment is not yet due or is too far past its time
+                break;
+            }
         }
+    }
+    
+    private canDisplayComment(comment: Comment): boolean {
+        const now = performance.now();
+        const lanes = this.getLanesForMode(comment.scrollMode);
+        
+        // Check if any lane is available for this comment
+        for (let i = 0; i < lanes.length; i++) {
+            if (this.isLaneAvailable(lanes, i, now)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private emitComment(comment: Comment, timeElapsed = 0): void {
