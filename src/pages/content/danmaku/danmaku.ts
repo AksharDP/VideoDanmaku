@@ -333,7 +333,7 @@ export class Danmaku {
 
         danmakuElement.appendChild(popup);
 
-        const lane = this.findLane(comment);
+        const lane = this.findAvailableLane(comment);
         if (lane === -1) {
             return;
         }
@@ -397,15 +397,29 @@ export class Danmaku {
         this.activeComments.push(danmakuComment);
     }
 
-    private findLane(comment: Comment): number {
+    private findAvailableLane(comment: Comment): number {
         const now = performance.now();
         const lanes = this.getLanesForMode(comment.scrollMode);
+        
+        // Always start from lane 0 and work upwards to prioritize lower line numbers
         for (let i = 0; i < lanes.length; i++) {
-            if (lanes[i] <= now) {
+            // Check if the lane is available based on density settings
+            if (this.isLaneAvailable(lanes, i, now)) {
                 return i;
             }
         }
         return -1;
+    }
+
+    private isLaneAvailable(lanes: number[], laneIndex: number, now: number): boolean {
+        // If the lane is already expired, it's available
+        if (lanes[laneIndex] <= now) {
+            return true;
+        }
+        
+        // Check density settings to see if we can use this lane
+        const timeUntilAvailable = lanes[laneIndex] - now;
+        return timeUntilAvailable <= this.densityDelay;
     }
 
     private getLanesForMode(mode: "slide" | "top" | "bottom"): number[] {
@@ -445,31 +459,6 @@ export class Danmaku {
             case "dense":
                 this.densityDelay = 0; // No delay
                 break;
-        }
-        
-        // Update the lane availability times for all comment types
-        const now = performance.now();
-        const newExpiryTime = now + this.densityDelay / 1000;
-        
-        // Update sliding lanes
-        for (let i = 0; i < this.slidingLanes.length; i++) {
-            if (this.slidingLanes[i] > now) {
-                this.slidingLanes[i] = Math.max(this.slidingLanes[i], newExpiryTime);
-            }
-        }
-        
-        // Update top lanes
-        for (let i = 0; i < this.topLanes.length; i++) {
-            if (this.topLanes[i] > now) {
-                this.topLanes[i] = Math.max(this.topLanes[i], newExpiryTime);
-            }
-        }
-        
-        // Update bottom lanes
-        for (let i = 0; i < this.bottomLanes.length; i++) {
-            if (this.bottomLanes[i] > now) {
-                this.bottomLanes[i] = Math.max(this.bottomLanes[i], newExpiryTime);
-            }
         }
         
         // Re-evaluate which comments should be visible based on new density
