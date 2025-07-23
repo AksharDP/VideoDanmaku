@@ -43,6 +43,8 @@ export class Danmaku {
     private speedMultiplier: number = 1;
     private opacityLevel: number = 1;
     private fontSizeMultiplier: number = 1;
+    private densityMode: "sparse" | "normal" | "dense" = "normal";
+    private densityDelay: number = 1000; // Default to 1 second for normal
 
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
@@ -427,6 +429,51 @@ export class Danmaku {
                 comment.speed = (containerWidth + comment.width) / Danmaku.DURATION * this.speedMultiplier;
             }
         });
+    }
+
+    public setDensity(density: "sparse" | "normal" | "dense"): void {
+        this.densityMode = density;
+        
+        // Set the delay based on density mode
+        switch (density) {
+            case "sparse":
+                this.densityDelay = 2000; // 2 seconds
+                break;
+            case "normal":
+                this.densityDelay = 1000; // 1 second
+                break;
+            case "dense":
+                this.densityDelay = 0; // No delay
+                break;
+        }
+        
+        // Update the lane availability times for all comment types
+        const now = performance.now();
+        const newExpiryTime = now + this.densityDelay / 1000;
+        
+        // Update sliding lanes
+        for (let i = 0; i < this.slidingLanes.length; i++) {
+            if (this.slidingLanes[i] > now) {
+                this.slidingLanes[i] = Math.max(this.slidingLanes[i], newExpiryTime);
+            }
+        }
+        
+        // Update top lanes
+        for (let i = 0; i < this.topLanes.length; i++) {
+            if (this.topLanes[i] > now) {
+                this.topLanes[i] = Math.max(this.topLanes[i], newExpiryTime);
+            }
+        }
+        
+        // Update bottom lanes
+        for (let i = 0; i < this.bottomLanes.length; i++) {
+            if (this.bottomLanes[i] > now) {
+                this.bottomLanes[i] = Math.max(this.bottomLanes[i], newExpiryTime);
+            }
+        }
+        
+        // Re-evaluate which comments should be visible based on new density
+        this.seek();
     }
 
     public setOpacity(percent: number): void {

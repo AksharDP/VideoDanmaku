@@ -341,24 +341,13 @@ export class DanmakuInput {
     }
 
     private updateDensityUI(density: "sparse" | "normal" | "dense") {
-
-        // this.densityOptions.forEach((option) => {
-        //     option.classList.remove("selected-density");
-        // });
-        // const selectedOption = Array.from(this.densityOptions).find(
-        //     (option) => option.dataset.density === density
-        // );
-        // if (selectedOption) {
-        //     selectedOption.classList.add("selected-density");
-        // }
-
-        // optimize this to have selected-density be an Id since there is only going to be one selected density at a time
+        // Update UI selection
         this.densityOptions.forEach((option) => {
             option.classList.toggle("selected-density", option.dataset.density === density);
-
         });
-        // this.danmaku.setDensity(density);
-
+        
+        // Apply density setting to danmaku
+        this.danmaku.setDensity(density);
     }
 
     private updateSliderPosition(slider: HTMLInputElement, valueElement: HTMLElement) {
