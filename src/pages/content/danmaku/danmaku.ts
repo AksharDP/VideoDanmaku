@@ -39,6 +39,9 @@ export class Danmaku {
     private static readonly LANE_HEIGHT = 30;
     private static readonly FONT_SIZE = 24;
 
+    private resizeObserver: ResizeObserver | null = null;
+    private lastVideoRect: DOMRect | null = null;
+
     // Settings properties
     private speedMultiplier: number = 1;
     private opacityLevel: number = 1;
@@ -52,6 +55,8 @@ export class Danmaku {
         this.reportModal = new ReportModal();
         this.resize();
         this.addVideoEventListeners();
+        this.setupResizeObserver();
+        this.setupWindowResizeListener();
     }
 
     public get getCurrentTime(): number {
@@ -138,9 +143,19 @@ export class Danmaku {
     public resize(): void {
         const videoRect = this.videoPlayer.getBoundingClientRect();
         const numLanes = Math.floor(videoRect.height / Danmaku.LANE_HEIGHT);
-        this.slidingLanes = new Array(numLanes).fill(0);
-        this.topLanes = new Array(numLanes).fill(0);
-        this.bottomLanes = new Array(numLanes).fill(0);
+        
+        // Store the current video rect for comparison
+        this.lastVideoRect = videoRect;
+        
+        // Only recreate lanes if the number of lanes has changed
+        if (this.slidingLanes.length !== numLanes) {
+            this.slidingLanes = new Array(numLanes).fill(0);
+            this.topLanes = new Array(numLanes).fill(0);
+            this.bottomLanes = new Array(numLanes).fill(0);
+            
+            // Re-seek to reposition all comments with the new lane configuration
+            this.seek();
+        }
     }
 
     public show(): void {
@@ -198,6 +213,10 @@ export class Danmaku {
         this.resize();
 
         this.addVideoEventListeners();
+        
+        // Clean up and set up resize observers again
+        this.cleanupResizeObserver();
+        this.setupResizeObserver();
     }
 
     public destroy(): void {
@@ -208,7 +227,48 @@ export class Danmaku {
             this.videoPlayer.removeEventListener(event, listener);
         });
         this.videoEventListeners = [];
+        
+        // Clean up resize observers
+        this.cleanupResizeObserver();
+        this.cleanupWindowResizeListener();
     }
+    
+    private setupResizeObserver(): void {
+        this.resizeObserver = new ResizeObserver(() => {
+            this.resize();
+        });
+        this.resizeObserver.observe(this.videoPlayer);
+    }
+    
+    private cleanupResizeObserver(): void {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
+    }
+    
+    private setupWindowResizeListener(): void {
+        // Listen for window resize events (for zoom changes)
+        window.addEventListener('resize', this.handleWindowResize);
+    }
+    
+    private cleanupWindowResizeListener(): void {
+        window.removeEventListener('resize', this.handleWindowResize);
+    }
+    
+    private handleWindowResize = (): void => {
+        // For performance, we'll only check resize if it's been a moment
+        // This prevents excessive processing during rapid resizing
+        if (this.resizeTimeoutId) {
+            window.clearTimeout(this.resizeTimeoutId);
+        }
+        
+        this.resizeTimeoutId = window.setTimeout(() => {
+            this.resize();
+        }, 100);
+    };
+    
+    private resizeTimeoutId: number | null = null;
 
     public clear(): void {
         this.activeComments.forEach((c) => c.element.remove());
