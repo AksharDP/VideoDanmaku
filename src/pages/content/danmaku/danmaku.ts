@@ -120,6 +120,15 @@ export class Danmaku {
         const currentTime = this.videoPlayer.currentTime;
         this.comments = [];
 
+        // Find comments that should be active now (including those that might be delayed)
+        const futureComments = this.allComments.filter((comment) => {
+            // Include comments that start within the next MAX_COMMENT_DELAY seconds
+            // This ensures delayed comments are considered for emission
+            return comment.time >= currentTime && 
+                   comment.time <= (currentTime + (Danmaku.MAX_COMMENT_DELAY / 1000));
+        });
+
+        // Also include comments that should already be visible
         const onScreenComments = this.allComments.filter((comment) => {
             const hasStarted = comment.time <= currentTime;
             const hasNotEnded = comment.time + Danmaku.DURATION > currentTime;
@@ -136,6 +145,7 @@ export class Danmaku {
             this.emitComment(comment);
         });
 
+        // Set up the future comment queue for proper distribution
         const startIndex = this.allComments.findIndex(
             (comment) => comment.time >= currentTime
         );
