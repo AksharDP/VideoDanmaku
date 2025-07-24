@@ -407,6 +407,17 @@ export class Danmaku {
     }
 
     private emitComment(comment: Comment, timeElapsed = 0): void {
+        // Check if this comment is already active to prevent duplicates
+        const isAlreadyActive = this.activeComments.some(activeComment => 
+            activeComment.id === comment.id && 
+            activeComment.time === comment.time && 
+            activeComment.content === comment.content
+        );
+        
+        if (isAlreadyActive) {
+            return;
+        }
+
         // Reuse DOM elements from pool when possible
         let danmakuElement: HTMLElement;
         if (this.commentPool.length > 0) {
