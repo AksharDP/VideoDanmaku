@@ -11,7 +11,8 @@ interface DanmakuComment extends Comment {
     expiry: number;
     element: HTMLElement;
     isPaused?: boolean;
-    startTime: number; // Track when this comment was created
+    startTime: number;
+    initialX: number; // Store initial X position for consistent repositioning
 }
 
 type VideoEventListener = {
@@ -40,7 +41,7 @@ export class Danmaku {
     private static readonly DURATION = 7;
     private static readonly LANE_HEIGHT = 30;
     private static readonly FONT_SIZE = 24;
-    private static readonly MAX_COMMENT_DELAY = 5000; // Maximum 5 seconds delay for comments
+    private static readonly MAX_COMMENT_DELAY = 5000;
 
     private resizeObserver: ResizeObserver | null = null;
     private lastVideoRect: DOMRect | null = null;
@@ -56,7 +57,7 @@ export class Danmaku {
     private maxPoolSize: number = 50;
     private pendingRemovals: DanmakuComment[] = [];
     private lastEmitTime: number = 0;
-    private emitThrottle: number = 16; // ~60fps
+    private emitThrottle: number = 16;
 
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
@@ -82,14 +83,62 @@ export class Danmaku {
 
     public setComments(comments: Comment[]): void {
         this.allComments = comments.sort((a, b) => a.time - b.time);
+        // Pre-calculate positions for all comments
+        this.preCalculateCommentPositions();
         this.seek();
         this.setCommentsCount = this.allComments.length;
+    }
+
+    private preCalculateCommentPositions(): void {
+        // Reset lane tracking
+        const numLanes = Math.floor(this.container.offsetHeight / Danmaku.LANE_HEIGHT);
+        this.slidingLanes = new Array(numLanes).fill(0);
+        this.topLanes = new Array(numLanes).fill(0);
+        this.bottomLanes = new Array(numLanes).fill(0);
+
+        // Pre-calculate positions for all comments
+        for (const comment of this.allComments) {
+            // This is just for tracking lane availability during pre-calculation
+            // Actual positioning will happen when comments are emitted
+            const lanes = this.getLanesForMode(comment.scrollMode);
+            
+            if (comment.scrollMode === ScrollMode.SLIDE) {
+                // For sliding comments, we need to calculate when each lane will be available
+                let earliestLane = 0;
+                let earliestTime = lanes[0];
+                
+                for (let i = 1; i < lanes.length; i++) {
+                    if (lanes[i] < earliestTime) {
+                        earliestTime = lanes[i];
+                        earliestLane = i;
+                    }
+                }
+                
+                // Set the lane to be occupied until the comment would clear it
+                const containerWidth = this.container.offsetWidth;
+                const estimatedWidth = 200; // Rough estimate, will be accurate when actually rendered
+                const speed = (containerWidth + estimatedWidth) / Danmaku.DURATION * this.speedMultiplier;
+                const timeToClear = (estimatedWidth / speed) * 1000;
+                lanes[earliestLane] = (comment.time * 1000) + timeToClear;
+            } else {
+                // For static comments, just mark a lane as occupied for the duration
+                const staticDuration = Danmaku.DURATION * 1000;
+                let availableLane = 0;
+                for (let i = 0; i < lanes.length; i++) {
+                    if (lanes[i] <= comment.time * 1000) {
+                        availableLane = i;
+                        break;
+                    }
+                }
+                lanes[availableLane] = (comment.time * 1000) + staticDuration;
+            }
+        }
     }
 
     public play(): void {
         if (this.isRunning || !this.isVisible) return;
         this.isRunning = true;
-        this.lastTimestamp = 0; // Reset timestamp when playing
+        this.lastTimestamp = 0;
         this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
 
@@ -110,7 +159,7 @@ export class Danmaku {
 
         this.resyncCommentQueue();
 
-        // Reset lane tracking
+        // Reset lane tracking but maintain pre-calculated availability
         this.slidingLanes.fill(0);
         this.topLanes.fill(0);
         this.bottomLanes.fill(0);
@@ -120,15 +169,7 @@ export class Danmaku {
         const currentTime = this.videoPlayer.currentTime;
         this.comments = [];
 
-        // Find comments that should be active now (including those that might be delayed)
-        const futureComments = this.allComments.filter((comment) => {
-            // Include comments that start within the next MAX_COMMENT_DELAY seconds
-            // This ensures delayed comments are considered for emission
-            return comment.time >= currentTime && 
-                   comment.time <= (currentTime + (Danmaku.MAX_COMMENT_DELAY / 1000));
-        });
-
-        // Also include comments that should already be visible
+        // Include comments that should already be visible or will be soon
         const onScreenComments = this.allComments.filter((comment) => {
             const hasStarted = comment.time <= currentTime;
             const hasNotEnded = comment.time + Danmaku.DURATION > currentTime;
@@ -145,7 +186,7 @@ export class Danmaku {
             this.emitComment(comment);
         });
 
-        // Set up the future comment queue for proper distribution
+        // Set up the future comment queue
         const startIndex = this.allComments.findIndex(
             (comment) => comment.time >= currentTime
         );
@@ -158,10 +199,8 @@ export class Danmaku {
         const videoRect = this.videoPlayer.getBoundingClientRect();
         const numLanes = Math.floor(videoRect.height / Danmaku.LANE_HEIGHT);
         
-        // Store the current video rect for comparison
         this.lastVideoRect = videoRect;
         
-        // Only recreate lanes if the number of lanes has changed
         if (this.slidingLanes.length !== numLanes) {
             this.slidingLanes = new Array(numLanes).fill(0);
             this.topLanes = new Array(numLanes).fill(0);
@@ -227,7 +266,6 @@ export class Danmaku {
 
         this.addVideoEventListeners();
         
-        // Clean up and set up resize observers again
         this.cleanupResizeObserver();
         this.setupResizeObserver();
     }
@@ -240,11 +278,9 @@ export class Danmaku {
         });
         this.videoEventListeners = [];
         
-        // Clean up resize observers
         this.cleanupResizeObserver();
         this.cleanupWindowResizeListener();
         
-        // Clear comment pool
         this.commentPool = [];
     }
     
@@ -283,7 +319,6 @@ export class Danmaku {
     private resizeTimeoutId: number | null = null;
 
     public clear(): void {
-        // Batch DOM removals
         const elementsToRemove = this.activeComments.map(comment => comment.element);
         elementsToRemove.forEach(element => element.remove());
         this.activeComments = [];
@@ -329,7 +364,6 @@ export class Danmaku {
         const now = performance.now();
         const stillActive: DanmakuComment[] = [];
         
-        // Process comments in batches for better performance
         for (let i = 0; i < this.activeComments.length; i++) {
             const comment = this.activeComments[i];
             
@@ -340,10 +374,11 @@ export class Danmaku {
             }
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
-                comment.x -= comment.speed * delta;
+                // Calculate position based on actual time for consistency
+                const timeSinceStart = this.videoPlayer.currentTime - comment.time;
+                comment.x = comment.initialX - (comment.speed * timeSinceStart);
                 comment.element.style.transform = `translateX(${comment.x}px)`;
                 
-                // Only check removal condition
                 if (comment.x + comment.width >= 0) {
                     stillActive.push(comment);
                 } else {
@@ -358,7 +393,6 @@ export class Danmaku {
             }
         }
         
-        // Batch remove elements
         if (this.pendingRemovals.length > 0) {
             this.pendingRemovals.forEach(comment => comment.element.remove());
             this.pendingRemovals = [];
@@ -371,33 +405,28 @@ export class Danmaku {
         const currentTime = this.videoPlayer.currentTime;
         const now = performance.now();
         
-        // Throttle comment emission to reduce CPU usage
         if (now - this.lastEmitTime < this.emitThrottle) {
             return;
         }
         this.lastEmitTime = now;
         
-        // Process comments that are due to be displayed
         let processedCount = 0;
-        const maxProcessedPerFrame = 10; // Limit processing per frame
+        const maxProcessedPerFrame = 10;
         
         while (this.comments.length > 0 && processedCount < maxProcessedPerFrame) {
             const comment = this.comments[0];
             const timeDiff = currentTime - comment.time;
             
-            // If comment is within the allowable delay window and we can display it, do so
             if (timeDiff >= 0 && this.canDisplayComment(comment)) {
                 this.comments.shift();
                 this.emitComment(comment);
                 processedCount++;
             } 
-            // If comment is more than MAX_COMMENT_DELAY past its time, skip it
             else if (timeDiff > Danmaku.MAX_COMMENT_DELAY / 1000) {
                 this.comments.shift();
                 processedCount++;
             } 
             else {
-                // Comment is not yet due or is too far past its time
                 break;
             }
         }
@@ -407,15 +436,12 @@ export class Danmaku {
         const now = performance.now();
         const lanes = this.getLanesForMode(comment.scrollMode);
         
-        // Check if any lane is available for this comment
         for (let i = 0; i < lanes.length; i++) {
             if (this.isLaneAvailable(lanes, i, now)) {
                 return true;
             }
         }
         
-        // For sliding comments, if no lane is immediately available, 
-        // check if we can delay the comment within MAX_COMMENT_DELAY
         if (comment.scrollMode === ScrollMode.SLIDE) {
             const timeSinceComment = this.videoPlayer.currentTime - comment.time;
             return timeSinceComment <= (Danmaku.MAX_COMMENT_DELAY / 1000);
@@ -425,7 +451,6 @@ export class Danmaku {
     }
 
     private emitComment(comment: Comment, timeElapsed = 0): void {
-        // Check if this comment is already active to prevent duplicates
         const isAlreadyActive = this.activeComments.some(activeComment => 
             activeComment.id === comment.id && 
             activeComment.time === comment.time && 
@@ -436,17 +461,14 @@ export class Danmaku {
             return;
         }
 
-        // Reuse DOM elements from pool when possible
         let danmakuElement: HTMLElement;
         if (this.commentPool.length > 0) {
             danmakuElement = this.commentPool.pop()!;
             danmakuElement.textContent = comment.content;
-            // Reset any previous styles
             danmakuElement.className = "danmaku-comment";
             danmakuElement.style.color = comment.color;
             danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px`;
             
-            // Clear existing popup if any
             const existingPopup = danmakuElement.querySelector('.danmaku-comment-popup');
             if (existingPopup) {
                 existingPopup.remove();
@@ -459,7 +481,6 @@ export class Danmaku {
             danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px`;
         }
 
-        // Create popup only when needed
         const popup = document.createElement("div");
         popup.className = "danmaku-comment-popup";
         popup.style.display = "none";
@@ -496,7 +517,6 @@ export class Danmaku {
 
         const lane = this.findAvailableLane(comment);
         if (lane === -1) {
-            // Return element to pool instead of discarding
             if (this.commentPool.length < this.maxPoolSize) {
                 this.commentPool.push(danmakuElement);
             }
@@ -517,7 +537,8 @@ export class Danmaku {
             expiry: now + Danmaku.DURATION * 1000,
             element: danmakuElement,
             isPaused: false,
-            startTime: now, // Track when this comment was created
+            startTime: now,
+            initialX: 0
         };
 
         danmakuElement.addEventListener("mouseenter", () => {
@@ -533,22 +554,19 @@ export class Danmaku {
             case ScrollMode.SLIDE:
                 {
                     const containerWidth = this.container.offsetWidth;
-                    // Calculate speed based on comment width to ensure all comments take the same time
-                    // Speed = (containerWidth + commentWidth) / DURATION
                     danmakuComment.speed = (containerWidth + commentWidth) / Danmaku.DURATION * this.speedMultiplier;
                     
                     // Calculate position based on actual time since comment should have started
                     const timeSinceStart = this.videoPlayer.currentTime - comment.time;
-                    const distanceTraveled = timeSinceStart * danmakuComment.speed;
-                    danmakuComment.x = containerWidth - distanceTraveled;
+                    danmakuComment.initialX = containerWidth;
+                    danmakuComment.x = containerWidth - (timeSinceStart * danmakuComment.speed);
                     
                     danmakuElement.style.top = `${danmakuComment.y}px`;
                     danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
                     
-                    // Set the lane availability time based on the time it takes for the comment to clear the lane
-                    // This ensures proper spacing between comments in the same lane
-                    const timeToClearLane = (commentWidth + danmakuComment.x) / danmakuComment.speed;
-                    this.slidingLanes[lane] = now + timeToClearLane * 1000;
+                    // Set the lane availability time
+                    const timeToClearLane = (commentWidth / danmakuComment.speed) * 1000;
+                    this.slidingLanes[lane] = now + timeToClearLane;
                     break;
                 }
             case ScrollMode.TOP:
@@ -578,16 +596,12 @@ export class Danmaku {
         const now = performance.now();
         const lanes = this.getLanesForMode(comment.scrollMode);
         
-        // Always start from lane 0 and work upwards to prioritize lower line numbers
         for (let i = 0; i < lanes.length; i++) {
-            // Check if the lane is available based on density settings
             if (this.isLaneAvailable(lanes, i, now)) {
                 return i;
             }
         }
         
-        // If no lane is immediately available for sliding comments, 
-        // find the lane that will be available soonest
         if (comment.scrollMode === ScrollMode.SLIDE) {
             let earliestLane = 0;
             let earliestTime = lanes[0];
@@ -599,7 +613,6 @@ export class Danmaku {
                 }
             }
             
-            // Check if the earliest available time is within our MAX_COMMENT_DELAY window
             const timeUntilAvailable = earliestTime - now;
             if (timeUntilAvailable <= Danmaku.MAX_COMMENT_DELAY) {
                 return earliestLane;
@@ -610,19 +623,16 @@ export class Danmaku {
     }
 
     private isLaneAvailable(lanes: number[], laneIndex: number, now: number): boolean {
-        // If the lane is already expired, it's available
         if (lanes[laneIndex] <= now) {
             return true;
         }
         
-        // For dense mode, always allow comments (no delay)
         if (this.densityMode === DensityMode.DENSE) {
             return true;
         }
         
-        // For sparse and normal modes, check if enough time has passed
         const timeSinceLastComment = now - lanes[laneIndex];
-        return timeSinceLastComment >= (DensityConfig[this.densityMode] - 100); // Small buffer for timing precision
+        return timeSinceLastComment >= (DensityConfig[this.densityMode] - 100);
     }
 
     private getLanesForMode(mode: ScrollMode): number[] {
@@ -636,10 +646,8 @@ export class Danmaku {
         }
     }
 
-    // Settings methods
     public setSpeed(percent: number): void {
         this.speedMultiplier = percent / 100;
-        // Apply speed to all active comments
         this.activeComments.forEach((comment) => {
             if (comment.scrollMode === ScrollMode.SLIDE) {
                 const containerWidth = this.container.offsetWidth;
@@ -650,8 +658,6 @@ export class Danmaku {
 
     public setDensity(density: DensityMode): void {
         this.densityMode = density;
-        
-        // Re-evaluate which comments should be visible based on new density
         this.seek();
     }
 
@@ -664,12 +670,10 @@ export class Danmaku {
         this.fontSizeMultiplier = percent / 100;
         const newFontSize = Danmaku.FONT_SIZE * this.fontSizeMultiplier;
 
-        // Apply font size to all active comments
         this.activeComments.forEach((comment) => {
             comment.element.style.fontSize = `${newFontSize}px`;
         });
 
-        // Update CSS custom property for future comments
         this.container.style.setProperty('--danmaku-font-size', `${newFontSize}px`);
     }
 }
