@@ -403,6 +403,14 @@ export class Danmaku {
                 return true;
             }
         }
+        
+        // For sliding comments, if no lane is immediately available, 
+        // check if we can delay the comment within MAX_COMMENT_DELAY
+        if (comment.scrollMode === ScrollMode.SLIDE) {
+            const timeSinceComment = this.videoPlayer.currentTime - comment.time;
+            return timeSinceComment <= (Danmaku.MAX_COMMENT_DELAY / 1000);
+        }
+        
         return false;
     }
 
@@ -567,6 +575,27 @@ export class Danmaku {
                 return i;
             }
         }
+        
+        // If no lane is immediately available for sliding comments, 
+        // find the lane that will be available soonest
+        if (comment.scrollMode === ScrollMode.SLIDE) {
+            let earliestLane = 0;
+            let earliestTime = lanes[0];
+            
+            for (let i = 1; i < lanes.length; i++) {
+                if (lanes[i] < earliestTime) {
+                    earliestTime = lanes[i];
+                    earliestLane = i;
+                }
+            }
+            
+            // Check if the earliest available time is within our MAX_COMMENT_DELAY window
+            const timeUntilAvailable = earliestTime - now;
+            if (timeUntilAvailable <= Danmaku.MAX_COMMENT_DELAY) {
+                return earliestLane;
+            }
+        }
+        
         return -1;
     }
 
