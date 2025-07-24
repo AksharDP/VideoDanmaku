@@ -102,65 +102,35 @@ export class Danmaku {
 
     public seek(): void {
         console.log("Danmaku seeking");
-        
-        // Don't clear all comments on seek - let resyncCommentQueue handle it
-        // We'll preserve existing comments that are still valid
+        this.activeComments.forEach((comment) => comment.element.remove());
+        this.activeComments = [];
+
         this.resyncCommentQueue();
 
-        // Only reset lane timers if we're not playing (otherwise lanes should continue their natural timing)
-        if (!this.isRunning) {
-            this.slidingLanes.fill(0);
-            this.topLanes.fill(0);
-            this.bottomLanes.fill(0);
-        }
+        this.slidingLanes.fill(0);
+        this.topLanes.fill(0);
+        this.bottomLanes.fill(0);
     }
 
     private resyncCommentQueue(): void {
         const currentTime = this.videoPlayer.currentTime;
 
-        // Don't clear all comments on seek - just update their positions
-        // Keep track of which comments should be on screen
-        const onScreenCommentIds = new Set<number>();
-        const commentsToAdd: {comment: Comment, timeElapsed: number}[] = [];
+        this.comments = [];
 
-        // Identify which comments should be on screen
-        for (const comment of this.allComments) {
+        const onScreenComments = this.allComments.filter((comment) => {
             const hasStarted = comment.time <= currentTime;
             const hasNotEnded = comment.time + Danmaku.DURATION > currentTime;
-            
-            if (hasStarted && hasNotEnded) {
-                onScreenCommentIds.add(comment.id);
-                // Check if this comment is already in activeComments
-                const existingComment = this.activeComments.find(c => c.id === comment.id);
-                if (!existingComment) {
-                    commentsToAdd.push({
-                        comment,
-                        timeElapsed: currentTime - comment.time
-                    });
-                }
-            }
-        }
+            return hasStarted && hasNotEnded;
+        });
 
-        // Remove comments that should no longer be on screen
-        const commentsToRemove: DanmakuComment[] = [];
-        for (const activeComment of this.activeComments) {
-            if (!onScreenCommentIds.has(activeComment.id)) {
-                commentsToRemove.push(activeComment);
-            }
-        }
+        this.activeComments.forEach((c) => c.element.remove());
+        this.activeComments = [];
 
-        // Remove the comments that should be gone
-        for (const comment of commentsToRemove) {
-            comment.element.remove();
-            this.activeComments = this.activeComments.filter(c => c.id !== comment.id);
-        }
-
-        // Add any new comments that should be on screen
-        for (const {comment, timeElapsed} of commentsToAdd) {
+        onScreenComments.forEach((comment) => {
+            const timeElapsed = currentTime - comment.time;
             this.emitComment(comment, timeElapsed);
-        }
+        });
 
-        // Update the pending comments queue
         const startIndex = this.allComments.findIndex(
             (comment) => comment.time >= currentTime
         );
