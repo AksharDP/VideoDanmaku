@@ -11,6 +11,7 @@ interface DanmakuComment extends Comment {
     expiry: number;
     element: HTMLElement;
     isPaused?: boolean;
+    startTime: number; // Track when this comment was created
 }
 
 type VideoEventListener = {
@@ -88,6 +89,7 @@ export class Danmaku {
     public play(): void {
         if (this.isRunning || !this.isVisible) return;
         this.isRunning = true;
+        this.lastTimestamp = 0; // Reset timestamp when playing
         this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
 
@@ -131,8 +133,7 @@ export class Danmaku {
 
         // Emit all on-screen comments at once
         onScreenComments.forEach((comment) => {
-            const timeElapsed = currentTime - comment.time;
-            this.emitComment(comment, timeElapsed);
+            this.emitComment(comment);
         });
 
         const startIndex = this.allComments.findIndex(
@@ -487,6 +488,7 @@ export class Danmaku {
             expiry: now + Danmaku.DURATION * 1000,
             element: danmakuElement,
             isPaused: false,
+            startTime: now, // Track when this comment was created
         };
 
         danmakuElement.addEventListener("mouseenter", () => {
@@ -503,13 +505,17 @@ export class Danmaku {
                 {
                     const containerWidth = this.container.offsetWidth;
                     danmakuComment.speed = (containerWidth + commentWidth) / Danmaku.DURATION * this.speedMultiplier;
-                    const distanceTraveled = timeElapsed * danmakuComment.speed;
+                    
+                    // Calculate position based on actual time since comment should have started
+                    const timeSinceStart = this.videoPlayer.currentTime - comment.time;
+                    const distanceTraveled = timeSinceStart * danmakuComment.speed;
                     danmakuComment.x = containerWidth - distanceTraveled;
+                    
                     danmakuElement.style.top = `${danmakuComment.y}px`;
-                    danmakuElement.style.transform = `translateX(${danmakuComment.x}px`;
+                    danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
                     
                     // Set the lane availability time based on the time it takes for the comment to clear the lane
-                    this.slidingLanes[lane] = now + (commentWidth / danmakuComment.speed) * 1000;
+                    this.slidingLanes[lane] = now + ((commentWidth + danmakuComment.x) / danmakuComment.speed) * 1000;
                     break;
                 }
             case ScrollMode.TOP:
