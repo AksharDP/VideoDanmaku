@@ -515,6 +515,8 @@ export class Danmaku {
             case ScrollMode.SLIDE:
                 {
                     const containerWidth = this.container.offsetWidth;
+                    // Calculate speed based on comment width to ensure all comments take the same time
+                    // Speed = (containerWidth + commentWidth) / DURATION
                     danmakuComment.speed = (containerWidth + commentWidth) / Danmaku.DURATION * this.speedMultiplier;
                     
                     // Calculate position based on actual time since comment should have started
@@ -526,7 +528,9 @@ export class Danmaku {
                     danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
                     
                     // Set the lane availability time based on the time it takes for the comment to clear the lane
-                    this.slidingLanes[lane] = now + ((commentWidth + danmakuComment.x) / danmakuComment.speed) * 1000;
+                    // This ensures proper spacing between comments in the same lane
+                    const timeToClearLane = (commentWidth + danmakuComment.x) / danmakuComment.speed;
+                    this.slidingLanes[lane] = now + timeToClearLane * 1000;
                     break;
                 }
             case ScrollMode.TOP:
