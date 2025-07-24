@@ -50,6 +50,13 @@ export class Danmaku {
     private fontSizeMultiplier: number = 1;
     private densityMode: DensityMode = DensityMode.NORMAL;
 
+    // Performance optimizations
+    private commentPool: HTMLElement[] = [];
+    private maxPoolSize: number = 50;
+    private pendingRemovals: DanmakuComment[] = [];
+    private lastEmitTime: number = 0;
+    private emitThrottle: number = 16; // ~60fps
+
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
         this.container = container;
@@ -80,25 +87,12 @@ export class Danmaku {
 
     public play(): void {
         if (this.isRunning || !this.isVisible) return;
-        console.log(this.slidingLanes);
-        console.log("Danmaku playing");
-
-        // // Only resync if we don't have a valid lastTimestamp, which indicates we need to initialize
-        // // This prevents unnecessary repositioning of comments when simply unpausing
-        // if (this.lastTimestamp === 0) {
-        //     this.resyncCommentQueue();
-        // }
-
         this.isRunning = true;
-        this.animationFrameId = requestAnimationFrame((t) =>
-            this.animationLoop(t)
-        );
+        this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
 
     public pause(): void {
         if (!this.isRunning) return;
-        console.log(this.slidingLanes);
-        console.log("Danmaku paused");
         this.isRunning = false;
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
@@ -107,12 +101,14 @@ export class Danmaku {
     }
 
     public seek(): void {
-        console.log("Danmaku seeking");
-        this.activeComments.forEach((comment) => comment.element.remove());
+        // Batch DOM removals
+        const elementsToRemove = this.activeComments.map(comment => comment.element);
+        elementsToRemove.forEach(element => element.remove());
         this.activeComments = [];
 
         this.resyncCommentQueue();
 
+        // Reset lane tracking
         this.slidingLanes.fill(0);
         this.topLanes.fill(0);
         this.bottomLanes.fill(0);
@@ -120,7 +116,6 @@ export class Danmaku {
 
     private resyncCommentQueue(): void {
         const currentTime = this.videoPlayer.currentTime;
-
         this.comments = [];
 
         const onScreenComments = this.allComments.filter((comment) => {
@@ -129,9 +124,12 @@ export class Danmaku {
             return hasStarted && hasNotEnded;
         });
 
-        this.activeComments.forEach((c) => c.element.remove());
+        // Batch DOM removals
+        const elementsToRemove = this.activeComments.map(comment => comment.element);
+        elementsToRemove.forEach(element => element.remove());
         this.activeComments = [];
 
+        // Emit all on-screen comments at once
         onScreenComments.forEach((comment) => {
             const timeElapsed = currentTime - comment.time;
             this.emitComment(comment, timeElapsed);
@@ -141,9 +139,7 @@ export class Danmaku {
             (comment) => comment.time >= currentTime
         );
 
-        this.comments =
-            startIndex === -1 ? [] : this.allComments.slice(startIndex);
-
+        this.comments = startIndex === -1 ? [] : this.allComments.slice(startIndex);
         this.lastTimestamp = 0;
     }
 
@@ -207,7 +203,6 @@ export class Danmaku {
     }
 
     public reinitialize(videoPlayer: HTMLVideoElement): void {
-        console.log("Reinitializing Danmaku for new video player.");
         this.pause();
         this.clear();
 
@@ -227,7 +222,6 @@ export class Danmaku {
     }
 
     public destroy(): void {
-        console.log("Destroying Danmaku instance.");
         this.pause();
         this.clear();
         this.videoEventListeners.forEach(({ event, listener }) => {
@@ -238,6 +232,9 @@ export class Danmaku {
         // Clean up resize observers
         this.cleanupResizeObserver();
         this.cleanupWindowResizeListener();
+        
+        // Clear comment pool
+        this.commentPool = [];
     }
     
     private setupResizeObserver(): void {
@@ -255,7 +252,6 @@ export class Danmaku {
     }
     
     private setupWindowResizeListener(): void {
-        // Listen for window resize events (for zoom changes)
         window.addEventListener('resize', this.handleWindowResize);
     }
     
@@ -264,8 +260,6 @@ export class Danmaku {
     }
     
     private handleWindowResize = (): void => {
-        // For performance, we'll only check resize if it's been a moment
-        // This prevents excessive processing during rapid resizing
         if (this.resizeTimeoutId) {
             window.clearTimeout(this.resizeTimeoutId);
         }
@@ -278,7 +272,9 @@ export class Danmaku {
     private resizeTimeoutId: number | null = null;
 
     public clear(): void {
-        this.activeComments.forEach((c) => c.element.remove());
+        // Batch DOM removals
+        const elementsToRemove = this.activeComments.map(comment => comment.element);
+        elementsToRemove.forEach(element => element.remove());
         this.activeComments = [];
         this.comments = [];
         this.allComments = [];
@@ -305,9 +301,7 @@ export class Danmaku {
 
         if (!this.lastTimestamp) {
             this.lastTimestamp = timestamp;
-            this.animationFrameId = requestAnimationFrame((t) =>
-                this.animationLoop(t)
-            );
+            this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
             return;
         }
 
@@ -317,42 +311,66 @@ export class Danmaku {
         this.updateActiveComments(delta);
         this.emitNewComments();
 
-        this.animationFrameId = requestAnimationFrame((t) =>
-            this.animationLoop(t)
-        );
+        this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
 
     private updateActiveComments(delta: number): void {
         const now = performance.now();
-        this.activeComments = this.activeComments.filter((comment) => {
+        const stillActive: DanmakuComment[] = [];
+        
+        // Process comments in batches for better performance
+        for (let i = 0; i < this.activeComments.length; i++) {
+            const comment = this.activeComments[i];
+            
             if (comment.isPaused) {
                 comment.expiry += delta * 1000;
+                stillActive.push(comment);
+                continue;
             }
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
-                if (!comment.isPaused) {
-                    comment.x -= comment.speed * delta;
-                    comment.element.style.transform = `translateX(${comment.x}px)`;
-                }
-                if (comment.x + comment.width < 0) {
-                    comment.element.remove();
-                    return false;
+                comment.x -= comment.speed * delta;
+                comment.element.style.transform = `translateX(${comment.x}px)`;
+                
+                // Only check removal condition
+                if (comment.x + comment.width >= 0) {
+                    stillActive.push(comment);
+                } else {
+                    this.pendingRemovals.push(comment);
                 }
             } else {
-                if (now > comment.expiry) {
-                    comment.element.remove();
-                    return false;
+                if (now <= comment.expiry) {
+                    stillActive.push(comment);
+                } else {
+                    this.pendingRemovals.push(comment);
                 }
             }
-            return true;
-        });
+        }
+        
+        // Batch remove elements
+        if (this.pendingRemovals.length > 0) {
+            this.pendingRemovals.forEach(comment => comment.element.remove());
+            this.pendingRemovals = [];
+        }
+        
+        this.activeComments = stillActive;
     }
 
     private emitNewComments(): void {
         const currentTime = this.videoPlayer.currentTime;
+        const now = performance.now();
+        
+        // Throttle comment emission to reduce CPU usage
+        if (now - this.lastEmitTime < this.emitThrottle) {
+            return;
+        }
+        this.lastEmitTime = now;
         
         // Process comments that are due to be displayed
-        while (this.comments.length > 0) {
+        let processedCount = 0;
+        const maxProcessedPerFrame = 10; // Limit processing per frame
+        
+        while (this.comments.length > 0 && processedCount < maxProcessedPerFrame) {
             const comment = this.comments[0];
             const timeDiff = currentTime - comment.time;
             
@@ -360,57 +378,12 @@ export class Danmaku {
             if (timeDiff >= 0 && this.canDisplayComment(comment)) {
                 this.comments.shift();
                 this.emitComment(comment);
+                processedCount++;
             } 
             // If comment is more than MAX_COMMENT_DELAY past its time, skip it
             else if (timeDiff > Danmaku.MAX_COMMENT_DELAY / 1000) {
                 this.comments.shift();
-            } 
-            // If we can't display the comment yet (no available lanes), try to find a later comment we can display
-            else if (timeDiff >= 0 && !this.canDisplayComment(comment)) {
-                // Look for a later comment that can be displayed
-                let foundLaterComment = false;
-                let earliestAvailableTime = Infinity;
-                
-                // First pass: find the earliest time when a lane will be available
-                const now = performance.now();
-                for (const mode of [ScrollMode.SLIDE, ScrollMode.TOP, ScrollMode.BOTTOM] as const) {
-                    const lanes = this.getLanesForMode(mode);
-                    for (const laneTime of lanes) {
-                        if (laneTime > now && laneTime < earliestAvailableTime) {
-                            earliestAvailableTime = laneTime;
-                        }
-                    }
-                }
-                
-                // If we found a time when a lane will be available within our delay limit
-                if (earliestAvailableTime !== Infinity) {
-                    const availableTimeDiff = (earliestAvailableTime - now) / 1000;
-                    if (availableTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000) {
-                        // Look for any comment that could be displayed at that time
-                        for (let i = 0; i < this.comments.length; i++) {
-                            const laterComment = this.comments[i];
-                            const laterTimeDiff = currentTime - laterComment.time;
-                            
-                            // If the comment is within our time window and could be displayed when lanes are available
-                            if (laterTimeDiff >= -availableTimeDiff && 
-                                laterTimeDiff <= Danmaku.MAX_COMMENT_DELAY / 1000) {
-                                
-                                // Check if we can display this comment (it might be able to use a different lane)
-                                if (this.canDisplayComment(laterComment)) {
-                                    this.comments.splice(i, 1);
-                                    this.emitComment(laterComment);
-                                    foundLaterComment = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // If we couldn't find a later comment to display, we have to wait
-                if (!foundLaterComment) {
-                    break;
-                }
+                processedCount++;
             } 
             else {
                 // Comment is not yet due or is too far past its time
@@ -433,12 +406,30 @@ export class Danmaku {
     }
 
     private emitComment(comment: Comment, timeElapsed = 0): void {
-        const danmakuElement = document.createElement("div");
-        danmakuElement.textContent = comment.content;
-        danmakuElement.classList.add("danmaku-comment");
-        danmakuElement.style.color = comment.color;
-        danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE}px`;
+        // Reuse DOM elements from pool when possible
+        let danmakuElement: HTMLElement;
+        if (this.commentPool.length > 0) {
+            danmakuElement = this.commentPool.pop()!;
+            danmakuElement.textContent = comment.content;
+            // Reset any previous styles
+            danmakuElement.className = "danmaku-comment";
+            danmakuElement.style.color = comment.color;
+            danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px`;
+            
+            // Clear existing popup if any
+            const existingPopup = danmakuElement.querySelector('.danmaku-comment-popup');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+        } else {
+            danmakuElement = document.createElement("div");
+            danmakuElement.textContent = comment.content;
+            danmakuElement.classList.add("danmaku-comment");
+            danmakuElement.style.color = comment.color;
+            danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px`;
+        }
 
+        // Create popup only when needed
         const popup = document.createElement("div");
         popup.className = "danmaku-comment-popup";
         popup.style.display = "none";
@@ -475,6 +466,10 @@ export class Danmaku {
 
         const lane = this.findAvailableLane(comment);
         if (lane === -1) {
+            // Return element to pool instead of discarding
+            if (this.commentPool.length < this.maxPoolSize) {
+                this.commentPool.push(danmakuElement);
+            }
             return;
         }
 
@@ -505,17 +500,18 @@ export class Danmaku {
 
         switch (comment.scrollMode) {
             case ScrollMode.SLIDE:
-                { const containerWidth = this.container.offsetWidth;
-                danmakuComment.speed =
-                    (containerWidth + commentWidth) / Danmaku.DURATION;
-                const distanceTraveled = timeElapsed * danmakuComment.speed;
-                danmakuComment.x = containerWidth - distanceTraveled;
-                danmakuElement.style.top = `${danmakuComment.y}px`;
-                danmakuElement.style.transform = `translateX(${danmakuComment.x}px)`;
-                
-                // Set the lane availability time based on the time it takes for the comment to clear the lane
-                this.slidingLanes[lane] = now + (commentWidth / danmakuComment.speed) * 1000;
-                break; }
+                {
+                    const containerWidth = this.container.offsetWidth;
+                    danmakuComment.speed = (containerWidth + commentWidth) / Danmaku.DURATION * this.speedMultiplier;
+                    const distanceTraveled = timeElapsed * danmakuComment.speed;
+                    danmakuComment.x = containerWidth - distanceTraveled;
+                    danmakuElement.style.top = `${danmakuComment.y}px`;
+                    danmakuElement.style.transform = `translateX(${danmakuComment.x}px`;
+                    
+                    // Set the lane availability time based on the time it takes for the comment to clear the lane
+                    this.slidingLanes[lane] = now + (commentWidth / danmakuComment.speed) * 1000;
+                    break;
+                }
             case ScrollMode.TOP:
                 danmakuElement.style.top = `${danmakuComment.y}px`;
                 danmakuElement.style.left = `50%`;
@@ -523,16 +519,17 @@ export class Danmaku {
                 this.topLanes[lane] = danmakuComment.expiry;
                 break;
             case ScrollMode.BOTTOM:
-                { const totalLanes = Math.floor(
-                    this.container.offsetHeight / Danmaku.LANE_HEIGHT
-                );
-                danmakuComment.y =
-                    (totalLanes - 1 - lane) * Danmaku.LANE_HEIGHT;
-                danmakuElement.style.top = `${danmakuComment.y}px`;
-                danmakuElement.style.left = `50%`;
-                danmakuElement.style.transform = `translateX(-50%)`;
-                this.bottomLanes[lane] = danmakuComment.expiry;
-                break; }
+                {
+                    const totalLanes = Math.floor(
+                        this.container.offsetHeight / Danmaku.LANE_HEIGHT
+                    );
+                    danmakuComment.y = (totalLanes - 1 - lane) * Danmaku.LANE_HEIGHT;
+                    danmakuElement.style.top = `${danmakuComment.y}px`;
+                    danmakuElement.style.left = `50%`;
+                    danmakuElement.style.transform = `translateX(-50%)`;
+                    this.bottomLanes[lane] = danmakuComment.expiry;
+                    break;
+                }
         }
 
         this.activeComments.push(danmakuComment);
@@ -564,7 +561,6 @@ export class Danmaku {
         }
         
         // For sparse and normal modes, check if enough time has passed
-        // We need to ensure the full density delay has passed since the last comment
         const timeSinceLastComment = now - lanes[laneIndex];
         return timeSinceLastComment >= (DensityConfig[this.densityMode] - 100); // Small buffer for timing precision
     }
@@ -616,5 +612,4 @@ export class Danmaku {
         // Update CSS custom property for future comments
         this.container.style.setProperty('--danmaku-font-size', `${newFontSize}px`);
     }
-
 }
