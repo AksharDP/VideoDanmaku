@@ -1,5 +1,6 @@
 import { Comment } from "../api";
 import { ReportModal } from "../modal-report/modal-report";
+import { DensityMode, DensityConfig, ScrollMode } from "../interfaces/enum";
 
 interface DanmakuComment extends Comment {
     y: number;
@@ -47,8 +48,7 @@ export class Danmaku {
     private speedMultiplier: number = 1;
     private opacityLevel: number = 1;
     private fontSizeMultiplier: number = 1;
-    private densityMode: "sparse" | "normal" | "dense" = "normal";
-    private densityDelay: number = 1000; // Default to 1 second for normal
+    private densityMode: DensityMode = DensityMode.NORMAL;
 
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
         this.videoPlayer = videoPlayer;
@@ -80,9 +80,14 @@ export class Danmaku {
 
     public play(): void {
         if (this.isRunning || !this.isVisible) return;
+        console.log(this.slidingLanes);
         console.log("Danmaku playing");
 
-        this.resyncCommentQueue();
+        // // Only resync if we don't have a valid lastTimestamp, which indicates we need to initialize
+        // // This prevents unnecessary repositioning of comments when simply unpausing
+        // if (this.lastTimestamp === 0) {
+        //     this.resyncCommentQueue();
+        // }
 
         this.isRunning = true;
         this.animationFrameId = requestAnimationFrame((t) =>
@@ -92,6 +97,7 @@ export class Danmaku {
 
     public pause(): void {
         if (!this.isRunning) return;
+        console.log(this.slidingLanes);
         console.log("Danmaku paused");
         this.isRunning = false;
         if (this.animationFrameId) {
@@ -323,7 +329,7 @@ export class Danmaku {
                 comment.expiry += delta * 1000;
             }
 
-            if (comment.scrollMode === "slide") {
+            if (comment.scrollMode === ScrollMode.SLIDE) {
                 if (!comment.isPaused) {
                     comment.x -= comment.speed * delta;
                     comment.element.style.transform = `translateX(${comment.x}px)`;
@@ -367,7 +373,7 @@ export class Danmaku {
                 
                 // First pass: find the earliest time when a lane will be available
                 const now = performance.now();
-                for (const mode of ['slide', 'top', 'bottom'] as const) {
+                for (const mode of [ScrollMode.SLIDE, ScrollMode.TOP, ScrollMode.BOTTOM] as const) {
                     const lanes = this.getLanesForMode(mode);
                     for (const laneTime of lanes) {
                         if (laneTime > now && laneTime < earliestAvailableTime) {
@@ -498,7 +504,7 @@ export class Danmaku {
         });
 
         switch (comment.scrollMode) {
-            case "slide":
+            case ScrollMode.SLIDE:
                 { const containerWidth = this.container.offsetWidth;
                 danmakuComment.speed =
                     (containerWidth + commentWidth) / Danmaku.DURATION;
@@ -510,13 +516,13 @@ export class Danmaku {
                 // Set the lane availability time based on the time it takes for the comment to clear the lane
                 this.slidingLanes[lane] = now + (commentWidth / danmakuComment.speed) * 1000;
                 break; }
-            case "top":
+            case ScrollMode.TOP:
                 danmakuElement.style.top = `${danmakuComment.y}px`;
                 danmakuElement.style.left = `50%`;
                 danmakuElement.style.transform = `translateX(-50%)`;
                 this.topLanes[lane] = danmakuComment.expiry;
                 break;
-            case "bottom":
+            case ScrollMode.BOTTOM:
                 { const totalLanes = Math.floor(
                     this.container.offsetHeight / Danmaku.LANE_HEIGHT
                 );
@@ -553,23 +559,23 @@ export class Danmaku {
         }
         
         // For dense mode, always allow comments (no delay)
-        if (this.densityMode === "dense") {
+        if (this.densityMode === DensityMode.DENSE) {
             return true;
         }
         
         // For sparse and normal modes, check if enough time has passed
         // We need to ensure the full density delay has passed since the last comment
         const timeSinceLastComment = now - lanes[laneIndex];
-        return timeSinceLastComment >= (this.densityDelay - 100); // Small buffer for timing precision
+        return timeSinceLastComment >= (DensityConfig[this.densityMode] - 100); // Small buffer for timing precision
     }
 
-    private getLanesForMode(mode: "slide" | "top" | "bottom"): number[] {
+    private getLanesForMode(mode: ScrollMode): number[] {
         switch (mode) {
-            case "slide":
+            case ScrollMode.SLIDE:
                 return this.slidingLanes;
-            case "top":
+            case ScrollMode.TOP:
                 return this.topLanes;
-            case "bottom":
+            case ScrollMode.BOTTOM:
                 return this.bottomLanes;
         }
     }
@@ -579,28 +585,15 @@ export class Danmaku {
         this.speedMultiplier = percent / 100;
         // Apply speed to all active comments
         this.activeComments.forEach((comment) => {
-            if (comment.scrollMode === "slide") {
+            if (comment.scrollMode === ScrollMode.SLIDE) {
                 const containerWidth = this.container.offsetWidth;
                 comment.speed = (containerWidth + comment.width) / Danmaku.DURATION * this.speedMultiplier;
             }
         });
     }
 
-    public setDensity(density: "sparse" | "normal" | "dense"): void {
+    public setDensity(density: DensityMode): void {
         this.densityMode = density;
-        
-        // Set the delay based on density mode
-        switch (density) {
-            case "sparse":
-                this.densityDelay = 2000; // 2 seconds
-                break;
-            case "normal":
-                this.densityDelay = 1000; // 1 second
-                break;
-            case "dense":
-                this.densityDelay = 0; // No delay
-                break;
-        }
         
         // Re-evaluate which comments should be visible based on new density
         this.seek();
