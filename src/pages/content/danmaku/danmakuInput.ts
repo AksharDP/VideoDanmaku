@@ -2,6 +2,7 @@ import { postComment, Comment, PostCommentResponse } from "../api";
 import { Danmaku } from "./danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
+import { DensityMode, FontSize, ScrollMode } from "../interfaces/enum";
 
 export class DanmakuInput {
     private danmaku: Danmaku;
@@ -35,9 +36,9 @@ export class DanmakuInput {
     private fontSizeValue!: HTMLElement;
 
     private selectedColor = "#ffffff";
-    private selectedPosition: "slide" | "top" | "bottom" = "slide";
+    private selectedPosition: ScrollMode = ScrollMode.SLIDE;
 
-    private selectedDensity: "sparse" | "normal" | "dense" = "normal";
+    private selectedDensity: DensityMode = DensityMode.NORMAL;
     private speedPercent = 100;
     private opacityPercent = 100;
     private fontSizePercent = 100;
@@ -48,7 +49,6 @@ export class DanmakuInput {
         this.loginModal = loginModal;
         this.videoId = videoId;
         this.container = document.createElement("div");
-
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area === "local" && changes.authToken) {
                 this.updateUIBasedOnAuth();
@@ -152,7 +152,7 @@ export class DanmakuInput {
         if (commentsLoadedEl) {
             commentsLoadedEl.textContent = `${count} comment${
                 count === 1 ? "" : "s"
-            } loaded`;
+                } loaded`;
         } else {
             console.error(
                 "DanmakuInput: Could not find #danmaku-comments-loaded element to update."
@@ -170,7 +170,7 @@ export class DanmakuInput {
                 if (commentsCount > 0) {
                     commentsLoadedEl.textContent = `${commentsCount} comment${
                         commentsCount === 1 ? "" : "s"
-                    } loaded`;
+                        } loaded`;
                 } else {
                     commentsLoadedEl.textContent = "Loading comments...";
                 }
@@ -194,6 +194,15 @@ export class DanmakuInput {
         );
         this.loginPrompt.addEventListener("click", () => this.openLoginPage());
         this.inputField.addEventListener("input", () => this.handleInput());
+        this.inputField.addEventListener("keydown", (event) => {
+            this.clearError();
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (this.inputField.value.trim()) {
+                    this.submitComment();
+                }
+            }
+        })
 
         this.styleButton.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -260,19 +269,45 @@ export class DanmakuInput {
 
         this.positionOptions.forEach((option) => {
             option.addEventListener("click", () => {
-                const position = option.dataset.position as
-                    | "slide"
-                    | "top"
-                    | "bottom";
-                this.selectedPosition = position;
-                this.updateSelectedPositionUI(position);
+                const position = option.dataset.position;
+                let scrollMode: ScrollMode;
+                switch (position) {
+                    case "slide":
+                        scrollMode = ScrollMode.SLIDE;
+                        break;
+                    case "top":
+                        scrollMode = ScrollMode.TOP;
+                        break;
+                    case "bottom":
+                        scrollMode = ScrollMode.BOTTOM;
+                        break;
+                    default:
+                        scrollMode = ScrollMode.SLIDE;
+                }
+                this.selectedPosition = scrollMode;
+                this.updateSelectedPositionUI(scrollMode);
             });
         });
 
         this.densityOptions.forEach((option) => {
             option.addEventListener("click", () => {
-                this.selectedDensity = option.dataset.density as "sparse" | "normal" | "dense";
-                this.updateDensityUI(this.selectedDensity);
+                const densityValue = option.dataset.density;
+                let density: DensityMode;
+                switch (densityValue) {
+                    case "sparse":
+                        density = DensityMode.SPARSE;
+                        break;
+                    case "normal":
+                        density = DensityMode.NORMAL;
+                        break;
+                    case "dense":
+                        density = DensityMode.DENSE;
+                        break;
+                    default:
+                        density = DensityMode.NORMAL;
+                }
+                this.selectedDensity = density;
+                this.updateDensityUI(density);
             });
         });
 
@@ -328,24 +363,55 @@ export class DanmakuInput {
         }
     }
 
-    private updateSelectedPositionUI(position: "slide" | "top" | "bottom") {
+    private updateSelectedPositionUI(position: ScrollMode) {
         this.positionOptions.forEach((option) =>
             option.classList.remove("selected-position")
         );
+
+        // Convert enum value to string for comparison with HTML dataset
+        let positionString: string;
+        switch (position) {
+            case ScrollMode.SLIDE:
+                positionString = "slide";
+                break;
+            case ScrollMode.TOP:
+                positionString = "top";
+                break;
+            case ScrollMode.BOTTOM:
+                positionString = "bottom";
+                break;
+            default:
+                positionString = "slide";
+        }
+
         const selectedOption = Array.from(this.positionOptions).find(
-            (option) => option.dataset.position === position
+            (option) => option.dataset.position === positionString
         );
         if (selectedOption) {
             selectedOption.classList.add("selected-position");
         }
     }
 
-    private updateDensityUI(density: "sparse" | "normal" | "dense") {
-        // Update UI selection
+    private updateDensityUI(density: DensityMode) {
+        // Update UI selection - convert enum value to string for comparison with dataset
         this.densityOptions.forEach((option) => {
-            option.classList.toggle("selected-density", option.dataset.density === density);
+            let densityString: string;
+            switch (density) {
+                case DensityMode.SPARSE:
+                    densityString = "sparse";
+                    break;
+                case DensityMode.NORMAL:
+                    densityString = "normal";
+                    break;
+                case DensityMode.DENSE:
+                    densityString = "dense";
+                    break;
+                default:
+                    densityString = "normal";
+            }
+            option.classList.toggle("selected-density", option.dataset.density === densityString);
         });
-        
+
         // Apply density setting to danmaku
         this.danmaku.setDensity(density);
     }
@@ -354,16 +420,22 @@ export class DanmakuInput {
         const min = parseInt(slider.min, 10);
         const max = parseInt(slider.max, 10);
         const value = parseInt(slider.value, 10);
-        
+
         // Calculate the percentage position of the slider value
         const percentage = ((value - min) / (max - min)) * 100;
-        
+
         // Position the value element at the calculated percentage
         valueElement.style.left = `${percentage}%`;
     }
 
     private handleInput() {
+        if (!this.inputField || !this.currentCharCount || !this.charCountContainer) {
+            console.error("DanmakuInput: Required elements not found.");
+            this.showError("Input field or character count elements not found.");
+            return;
+        }
         this.clearError();
+
         const charCount = this.inputField.value.length;
         this.charCountContainer.style.display =
             document.activeElement === this.inputField || charCount > 0
@@ -402,7 +474,32 @@ export class DanmakuInput {
         const content = this.inputField.value.trim();
         if (!content) return;
 
-        const currentTime = this.danmaku.getCurrentTime;
+        const videoId = this.videoId;
+        if (!videoId) {
+            this.showError("Video ID not found.");
+            return;
+        }
+        const currentTime = this.danmaku.videoPlayer.currentTime;
+        if (currentTime < 0) {
+            this.showError("Video is not playing.");
+            return;
+        }
+        // validate if selectedColor is valid hex color using regex
+        const hexColorRegex = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
+        if (!hexColorRegex.test(this.selectedColor)) {
+            this.showError("Invalid color selected.");
+            return;
+        }
+        // validate if selectedPosition is valid ScrollMode
+        if (
+            !Object.values(ScrollMode).includes(this.selectedPosition)
+        ) {
+            this.showError("Invalid position selected.");
+            return;
+        }
+        // validate if fontSize is valid FontSize
+
+        // if (!this.selectedColor)
         const response: PostCommentResponse = await postComment(
             "youtube",
             this.videoId,
@@ -410,7 +507,7 @@ export class DanmakuInput {
             content,
             this.selectedColor,
             this.selectedPosition,
-            "normal"
+            FontSize.NORMAL
         );
 
         if (response.success) {
@@ -421,7 +518,7 @@ export class DanmakuInput {
                 color: this.selectedColor,
                 userId: 0,
                 scrollMode: this.selectedPosition,
-                fontSize: "normal",
+                fontSize: FontSize.NORMAL,
             };
             this.danmaku.addComment(localComment);
             this.updateCommentsCount(this.danmaku.getCommentsCount);

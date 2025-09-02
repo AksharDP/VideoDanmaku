@@ -1,6 +1,16 @@
 import packageJson from "../../../package.json";
+import { FontSize, ScrollMode } from "./interfaces/enum";
 
 const API_BASE_URL = packageJson.API_BASE_URL;
+
+// Define proper user type instead of using any
+export interface User {
+    id: number;
+    email: string;
+    username: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export interface Comment {
     id: number;
@@ -8,9 +18,11 @@ export interface Comment {
     time: number;
     color: string;
     userId: number;
-    scrollMode: "slide" | "top" | "bottom";
-    fontSize: "small" | "normal" | "large";
+    scrollMode: ScrollMode;
+    fontSize: FontSize;
 }
+
+
 
 export interface LoginRequest {
     emailOrUsername: string;
@@ -29,7 +41,7 @@ export interface AuthResponse {
     token?: string;
     error?: string;
     message?: string;
-    user?: any;
+    user?: User;
     status?: number;
 }
 
@@ -59,7 +71,7 @@ export async function getComments(platform: string, videoId: string, commentLimi
         const response = await fetch(url);
         console.log("Response status:", response.status, "ok:", response.ok);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         console.log("Response data:", data);
@@ -81,8 +93,8 @@ export async function postComment(
     time: number,
     content: string,
     color: string,
-    scrollMode: "slide" | "top" | "bottom",
-    fontSize: "small" | "normal" | "large"
+    scrollMode: ScrollMode,
+    fontSize: FontSize
 ): Promise<PostCommentResponse> {
     try {
         const token = await new Promise<string | null>((resolve) => {
@@ -233,7 +245,7 @@ export async function reportComment(
                 console.error("Authentication failed. Please login again.");
                 chrome.storage.local.remove("authToken");
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+            new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
