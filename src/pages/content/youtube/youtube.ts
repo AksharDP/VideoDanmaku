@@ -1,5 +1,5 @@
 import { DanmakuInput } from "../danmaku/danmakuInput";
-import { getComments, Comment } from "../api";
+import { getComments } from "../api";
 import { Danmaku } from "../danmaku/danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import youtubeCss from "../css/sites/youtube.css?raw";
@@ -117,7 +117,7 @@ export class YouTubeAdapter implements SiteAdapter {
     ): Promise<void> {
         const onPlay = () => danmaku.play();
         const onPause = () => danmaku.pause();
-        const onSeek = () => danmaku.seek();
+        const onSeek = () => danmaku.resyncCommentQueue();
 
         const onLoadedMetadata = async () => {
             chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {

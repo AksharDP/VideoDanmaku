@@ -223,7 +223,7 @@ export class Danmaku {
         // this.resyncCommentQueue();
     // }
 
-    private resyncCommentQueue(): void {
+    public resyncCommentQueue(): void {
         const currentTime = this.videoPlayer.currentTime;
 
         this.activeComments.forEach(comment => this.returnElementToPool(comment.element));
