@@ -20,6 +20,7 @@ export class DanmakuInput {
     private charCountContainer!: HTMLElement;
     private currentCharCount!: HTMLElement;
     private toggleButton!: HTMLButtonElement;
+    private commentsLoadedElement!: HTMLElement;
     private errorMessageElement!: HTMLParagraphElement;
 
     private colorBoxes!: NodeListOf<HTMLElement>;
@@ -85,6 +86,9 @@ export class DanmakuInput {
             "#current-char-count"
         )!;
         this.toggleButton = this.container.querySelector(".danmaku-toggle-button")!;
+        this.commentsLoadedElement = this.container.querySelector(
+            "#danmaku-comments-loaded"
+        )!;
         this.colorBoxes = this.styleMenu.querySelectorAll(
             ".color-box:not(#custom-color-picker)"
         );
@@ -145,12 +149,8 @@ export class DanmakuInput {
     }
 
     public updateCommentsCount(count: number): void {
-        const commentsLoadedEl = this.container.querySelector<HTMLElement>(
-            "#danmaku-comments-loaded"
-        );
-
-        if (commentsLoadedEl) {
-            commentsLoadedEl.textContent = `${count} comment${
+        if (this.commentsLoadedElement) {
+            this.commentsLoadedElement.textContent = `${count} comment${
                 count === 1 ? "" : "s"
                 } loaded`;
         } else {
@@ -161,21 +161,17 @@ export class DanmakuInput {
     }
 
     public updateCommentsStatus(isEnabled: boolean, commentsCount: number = 0): void {
-        const commentsLoadedEl = this.container.querySelector<HTMLElement>(
-            "#danmaku-comments-loaded"
-        );
-
-        if (commentsLoadedEl) {
+        if (this.commentsLoadedElement) {
             if (isEnabled) {
                 if (commentsCount > 0) {
-                    commentsLoadedEl.textContent = `${commentsCount} comment${
+                    this.commentsLoadedElement.textContent = `${commentsCount} comment${
                         commentsCount === 1 ? "" : "s"
                         } loaded`;
                 } else {
-                    commentsLoadedEl.textContent = "Loading comments...";
+                    this.commentsLoadedElement.textContent = "Loading comments...";
                 }
             } else {
-                commentsLoadedEl.textContent = "Comments disabled";
+                this.commentsLoadedElement.textContent = "Comments disabled";
             }
         } else {
             console.error(
