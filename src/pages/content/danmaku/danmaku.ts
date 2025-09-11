@@ -9,7 +9,7 @@ import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 interface DanmakuLayoutInfo {
     commentId: number;
     lane: number;
-    startTime: number; // The actual, calculated time the comment should appear on screen.
+    startTime: number; // The actual, calculated time the comment should appear on screen (in milliseconds).
     scrollMode: ScrollMode;
     speed: number;
     width: number;
@@ -59,7 +59,7 @@ export class Danmaku {
     private commentsCount: number = 0;
 
     // --- Constants ---
-    private static readonly DURATION = 7; // seconds
+    private static readonly DURATION = 7000; // milliseconds
     private static readonly LANE_HEIGHT = 30; // pixels
     private static readonly FONT_SIZE = 24; // pixels
 
@@ -131,7 +131,7 @@ export class Danmaku {
         const containerWidth = this.container.offsetWidth || this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
         const screenHeight = this.lastKnownHeight || this.videoPlayer.offsetHeight;
         const laneCount = (Math.floor(screenHeight / Danmaku.LANE_HEIGHT) || 10) - 1;
-        const densityDelay = DensityConfig[this.densityMode].delay / 1000; // in seconds
+        const densityDelay = DensityConfig[this.densityMode].delay
         const duration = Danmaku.DURATION / this.speedMultiplier;
         const halfDuration = duration / 2; // Cached for fixed modes
 
@@ -147,10 +147,10 @@ export class Danmaku {
 
         for (const comment of this.allComments) {
             const textWidth = this.tempCanvasContext.measureText(comment.content).width;
-            const speed = (containerWidth + textWidth + containerWidth / 5) / duration;
+            const speed = (containerWidth + textWidth + containerWidth / 5) / (duration / 1000); // Convert duration to seconds for speed calculation
 
             let assignedLane = -1;
-            let layoutStartTime = comment.time; // Default to original time; may delay if needed
+            let layoutStartTime = comment.time * 1000; // Convert comment time from seconds to milliseconds
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
                 let bestLane = -1;
@@ -164,10 +164,10 @@ export class Danmaku {
                 }
 
                 // Change: Instead of skipping, delay startTime if needed to fit the lane
-                layoutStartTime = Math.max(comment.time, earliestAvailableTime);
+                layoutStartTime = Math.max(comment.time * 1000, earliestAvailableTime);
                 assignedLane = bestLane;
 
-                const entryTime = duration * textWidth / (this.lastKnownWidth + textWidth);
+                const entryTime = (duration / 1000) * textWidth / (this.lastKnownWidth + textWidth) * 1000; // Convert to milliseconds
                 laneTracker[ScrollMode.SLIDE][assignedLane] = layoutStartTime + entryTime + densityDelay;
             } else { // TOP or BOTTOM
                 const lanes = laneTracker[comment.scrollMode];
@@ -182,7 +182,7 @@ export class Danmaku {
                 }
 
                 // Change: Delay startTime if needed, similar to SLIDE
-                layoutStartTime = Math.max(comment.time, earliestFinishTime);
+                layoutStartTime = Math.max(comment.time * 1000, earliestFinishTime);
                 assignedLane = bestLane;
                 lanes[bestLane] = layoutStartTime + halfDuration;
             }
@@ -225,7 +225,7 @@ export class Danmaku {
     // }
 
     public resyncCommentQueue(): void {
-        const currentTime = this.videoPlayer.currentTime;
+        const currentTime = this.videoPlayer.currentTime * 1000; // Convert to milliseconds
 
         this.activeComments.forEach(comment => this.returnElementToPool(comment.element));
         this.activeComments = [];
@@ -385,7 +385,7 @@ export class Danmaku {
     }
 
     private emitNewComments(): void {
-        const currentTime = this.videoPlayer.currentTime;
+        const currentTime = this.videoPlayer.currentTime * 1000; // Convert to milliseconds
         while (this.scheduledComments.length > 0 && this.scheduledComments[0].startTime <= currentTime) {
             const layout = this.scheduledComments.shift()!;
             const comment = this.allComments.find(c => c.id === layout.commentId);
@@ -414,7 +414,7 @@ export class Danmaku {
                 x: 0,
                 speed: layout.speed,
                 width: layout.width,
-                expiry: performance.now() + Danmaku.DURATION * 1000,
+                expiry: performance.now() + Danmaku.DURATION,
                 element: danmakuElement,
                 popup: popup,
                 time: layout.startTime, // Use the actual start time for duration tracking
@@ -470,8 +470,8 @@ export class Danmaku {
             case ScrollMode.SLIDE: {
                 // const containerWidth = this.lastKnownWidth || this.videoPlayer.offsetWidth;
                 // const containerWidth = this.container.offsetWidth;
-                const timeSinceStart = this.videoPlayer.currentTime - layout.startTime;
-                danmakuComment.x = this.container.offsetWidth - (timeSinceStart * danmakuComment.speed);
+                const timeSinceStart = this.videoPlayer.currentTime * 1000 - layout.startTime;
+                danmakuComment.x = this.container.offsetWidth - (timeSinceStart / 1000 * danmakuComment.speed);
                 // console.log(danmakuComment.x, danmakuComment.speed, timeSinceStart);
                 element.style.top = `${danmakuComment.y}px`;
                 element.style.transform = `translateX(${danmakuComment.x}px)`;
