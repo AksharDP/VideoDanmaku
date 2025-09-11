@@ -24,6 +24,7 @@ interface DanmakuComment extends Comment {
     lane: number;
     expiry: number;
     element: HTMLElement;
+    popup: HTMLElement;
     isPaused?: boolean;
 }
 
@@ -127,7 +128,7 @@ export class Danmaku {
      * them a specific lane and start time based on availability, preventing overlaps.
      */
     private calculateLayouts(): void {
-        const screenWidth = this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
+        const containerWidth = this.container.offsetWidth || this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
         const screenHeight = this.lastKnownHeight || this.videoPlayer.offsetHeight;
         const laneCount = (Math.floor(screenHeight / Danmaku.LANE_HEIGHT) || 10) - 1;
         const densityDelay = DensityConfig[this.densityMode].delay / 1000; // in seconds
@@ -146,7 +147,7 @@ export class Danmaku {
 
         for (const comment of this.allComments) {
             const textWidth = this.tempCanvasContext.measureText(comment.content).width;
-            const speed = (screenWidth + textWidth) / duration;
+            const speed = (containerWidth + textWidth + containerWidth / 5) / duration;
 
             let assignedLane = -1;
             let layoutStartTime = comment.time; // Default to original time; may delay if needed
@@ -166,7 +167,7 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, earliestAvailableTime);
                 assignedLane = bestLane;
 
-                const entryTime = duration * textWidth / (screenWidth + textWidth);
+                const entryTime = duration * textWidth / (this.lastKnownWidth + textWidth);
                 laneTracker[ScrollMode.SLIDE][assignedLane] = layoutStartTime + entryTime + densityDelay;
             } else { // TOP or BOTTOM
                 const lanes = laneTracker[comment.scrollMode];
@@ -365,6 +366,8 @@ export class Danmaku {
                 comment.x -= comment.speed * delta;
                 comment.element.style.transform = `translateX(${comment.x}px)`;
 
+                // Check if comment is still within the screen bounds
+                // Comment should disappear when it has completely moved off-screen to the left
                 if (comment.x + comment.width > 0) {
                     stillActive.push(comment);
                 } else {
@@ -393,28 +396,39 @@ export class Danmaku {
     }
 
     private emitComment(comment: Comment, layout: DanmakuLayoutInfo): void {
-        if (this.activeComments.some(ac => ac.id === comment.id)) {
+        // Prevent duplicate comments from being emitted using O(1) lookup
+        const activeCommentIds = new Set(this.activeComments.map(ac => ac.id));
+        if (activeCommentIds.has(comment.id)) {
             return;
         }
 
-        const danmakuElement = this.getElementFromPool(comment);
-        const commentWidth = layout.width;
+        try {
+            const danmakuElement = this.getElementFromPool(comment);
+            const popup = this.createPopup(comment);
+            danmakuElement.appendChild(popup);
 
-        const danmakuComment: DanmakuComment = {
-            ...comment,
-            lane: layout.lane,
-            y: layout.lane * Danmaku.LANE_HEIGHT,
-            x: 0,
-            speed: layout.speed,
-            width: commentWidth,
-            expiry: performance.now() + Danmaku.DURATION * 1000,
-            element: danmakuElement,
-        };
+            const danmakuComment: DanmakuComment = {
+                ...comment,
+                lane: layout.lane,
+                y: layout.lane * Danmaku.LANE_HEIGHT,
+                x: 0,
+                speed: layout.speed,
+                width: layout.width,
+                expiry: performance.now() + Danmaku.DURATION * 1000,
+                element: danmakuElement,
+                popup: popup,
+                time: layout.startTime, // Use the actual start time for duration tracking
+            };
 
-        this.setupPopupInteraction(danmakuElement, danmakuComment);
-        this.setInitialPosition(danmakuElement, danmakuComment, layout);
+            // Set up interaction popup and initial position
+            this.setupPopupInteraction(danmakuElement, danmakuComment);
+            this.setInitialPosition(danmakuElement, danmakuComment, layout);
 
-        this.activeComments.push(danmakuComment);
+            // Add comment to active comments list
+            this.activeComments.push(danmakuComment);
+        } catch (error) {
+            console.error(`Failed to emit comment ${comment.id}:`, error);
+        }
     }
 
     private getElementFromPool(comment: Comment): HTMLElement {
@@ -438,8 +452,8 @@ export class Danmaku {
     }
 
     private setupPopupInteraction(element: HTMLElement, danmakuComment: DanmakuComment): void {
-        const popup = this.createPopup(danmakuComment);
-        element.appendChild(popup);
+        // The popup is already created and attached in emitComment, so we just need to set up events
+        const popup = danmakuComment.popup;
 
         element.onmouseenter = () => {
             danmakuComment.isPaused = true;
@@ -594,4 +608,3 @@ export class Danmaku {
         this.resyncCommentQueue();
     }
 }
-
