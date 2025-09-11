@@ -18,12 +18,6 @@ export const DensityConfig = {
 
 export type DensityModeType = `${DensityMode}`;
 
-// export type FontSize = {
-//     SMALL: "small",
-//     NORMAL: "normal",
-//     LARGE: "large",
-// }
-
 export enum FontSize {
     SMALL = "small",
     NORMAL = "normal",
