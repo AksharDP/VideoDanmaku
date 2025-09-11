@@ -127,12 +127,8 @@ export class DanmakuInput {
         this.updateUIBasedOnAuth();
         this.updateSelectedColorUI(this.selectedColor);
         this.updateSelectedPositionUI(this.selectedPosition);
-        this.updateDensityUI(this.selectedDensity);
 
-        // Initialize slider positions
-        this.speedValue.value = this.speedPercent.toString();
-        this.opacityValue.value = this.opacityPercent.toString();
-        this.fontSizeValue.value = this.fontSizePercent.toString();
+        this.loadSettings();
 
         chrome.storage.local.get("danmakuEnabled", ({ danmakuEnabled }) => {
             const isEnabled = danmakuEnabled !== false;
@@ -304,6 +300,7 @@ export class DanmakuInput {
                 }
                 this.selectedDensity = density;
                 this.updateDensityUI(density);
+                this.saveSettings();
             });
         });
 
@@ -311,6 +308,7 @@ export class DanmakuInput {
             this.speedPercent = parseInt(this.speedSlider.value, 10);
             this.speedValue.value = this.speedPercent.toString();
             this.danmaku.setSpeed(this.speedPercent);
+            this.saveSettings();
         });
 
         this.speedValue.addEventListener("change", () => {
@@ -322,12 +320,14 @@ export class DanmakuInput {
             this.speedValue.value = value.toString();
             this.speedSlider.value = value.toString();
             this.danmaku.setSpeed(this.speedPercent);
+            this.saveSettings();
         });
 
         this.opacitySlider.addEventListener("input", () => {
             this.opacityPercent = parseInt(this.opacitySlider.value, 10);
             this.opacityValue.value = this.opacityPercent.toString();
             this.danmaku.setOpacity(this.opacityPercent);
+            this.saveSettings();
         });
 
         this.opacityValue.addEventListener("change", () => {
@@ -339,12 +339,14 @@ export class DanmakuInput {
             this.opacityValue.value = value.toString();
             this.opacitySlider.value = value.toString();
             this.danmaku.setOpacity(this.opacityPercent);
+            this.saveSettings();
         });
 
         this.fontSizeSlider.addEventListener("input", () => {
             this.fontSizePercent = parseInt(this.fontSizeSlider.value, 10);
             this.fontSizeValue.value = this.fontSizePercent.toString();
             this.danmaku.setFontSize(this.fontSizePercent);
+            this.saveSettings();
         });
 
         this.fontSizeValue.addEventListener("change", () => {
@@ -356,6 +358,7 @@ export class DanmakuInput {
             this.fontSizeValue.value = value.toString();
             this.fontSizeSlider.value = value.toString();
             this.danmaku.setFontSize(this.fontSizePercent);
+            this.saveSettings();
         });
     }
 
@@ -584,5 +587,41 @@ export class DanmakuInput {
         this.inputField.disabled = !isLoggedIn;
         this.commentButton.disabled =
             !isLoggedIn || this.inputField.value.length > this.MAX_CHARS;
+    }
+
+    private saveSettings() {
+        const settings = {
+            density: this.selectedDensity,
+            speed: this.speedPercent,
+            opacity: this.opacityPercent,
+            fontSize: this.fontSizePercent,
+        };
+        chrome.storage.local.set({ danmakuSettings: settings });
+    }
+
+    private loadSettings() {
+        chrome.storage.local.get("danmakuSettings", (result) => {
+            const settings = result.danmakuSettings;
+            if (settings) {
+                this.selectedDensity = settings.density ?? DensityMode.NORMAL;
+                this.speedPercent = settings.speed ?? 100;
+                this.opacityPercent = settings.opacity ?? 100;
+                this.fontSizePercent = settings.fontSize ?? 100;
+            }
+            this.updateDensityUI(this.selectedDensity);
+            this.danmaku.setDensity(this.selectedDensity);
+
+            this.speedSlider.value = this.speedPercent.toString();
+            this.speedValue.value = this.speedPercent.toString();
+            this.danmaku.setSpeed(this.speedPercent);
+
+            this.opacitySlider.value = this.opacityPercent.toString();
+            this.opacityValue.value = this.opacityPercent.toString();
+            this.danmaku.setOpacity(this.opacityPercent);
+
+            this.fontSizeSlider.value = this.fontSizePercent.toString();
+            this.fontSizeValue.value = this.fontSizePercent.toString();
+            this.danmaku.setFontSize(this.fontSizePercent);
+        });
     }
 }
