@@ -59,9 +59,9 @@ export class Danmaku {
     private commentsCount: number = 0;
 
     // --- Constants ---
-    private static readonly DURATION = 7000; // milliseconds
-    private static readonly LANE_HEIGHT = 30; // pixels
-    private static readonly FONT_SIZE = 24; // pixels
+    private readonly DURATION = 7000; // milliseconds
+    private laneHeight: number; // pixels
+    private fontSize: number; // pixels
 
     // --- Observers and Timers ---
     private resizeObserver: ResizeObserver | null = null;
@@ -91,6 +91,9 @@ export class Danmaku {
             this.videoPlayer = document.createElement("video");
             this.container = document.createElement("div");
         }
+
+        this.fontSize = 24; // pixels
+        this.laneHeight = 30; // pixels
 
         this.reportModal = new ReportModal();
 
@@ -130,12 +133,12 @@ export class Danmaku {
     private calculateLayouts(): void {
         const containerWidth = this.container.offsetWidth || this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
         const screenHeight = this.lastKnownHeight || this.videoPlayer.offsetHeight;
-        const laneCount = (Math.floor(screenHeight / Danmaku.LANE_HEIGHT) || 10) - 1;
+        const laneCount = (Math.floor(screenHeight / this.laneHeight) || 10) - 1;
         const densityDelay = DensityConfig[this.densityMode].delay
-        const duration = Danmaku.DURATION / this.speedMultiplier;
+        const duration = this.DURATION / this.speedMultiplier;
         const halfDuration = duration / 2; // Cached for fixed modes
 
-        this.tempCanvasContext.font = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
+        this.tempCanvasContext.font = `${this.fontSize * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
 
         const laneTracker = {
             [ScrollMode.SLIDE]: Array(laneCount).fill(0),
@@ -229,7 +232,7 @@ export class Danmaku {
         this.activeComments.forEach(comment => this.returnElementToPool(comment.element));
         this.activeComments = [];
         const onScreenLayouts = this.commentLayout.filter(layout => {
-            const duration = (layout.scrollMode === ScrollMode.SLIDE) ? Danmaku.DURATION : Danmaku.DURATION / 2;
+            const duration = (layout.scrollMode === ScrollMode.SLIDE) ? this.DURATION : this.DURATION / 2;
             return layout.startTime <= currentTime && layout.startTime + duration > currentTime;
         });
         onScreenLayouts.forEach(layout => {
@@ -409,11 +412,11 @@ export class Danmaku {
             const danmakuComment: DanmakuComment = {
                 ...comment,
                 lane: layout.lane,
-                y: layout.lane * Danmaku.LANE_HEIGHT,
+                y: layout.lane * this.laneHeight,
                 x: 0,
                 speed: layout.speed,
                 width: layout.width,
-                expiry: performance.now() + Danmaku.DURATION,
+                expiry: performance.now() + this.DURATION,
                 element: danmakuElement,
                 popup: popup,
                 time: layout.startTime, // Use the actual start time for duration tracking
@@ -443,7 +446,7 @@ export class Danmaku {
         danmakuElement.className = "danmaku-comment";
         danmakuElement.textContent = comment.content;
         danmakuElement.style.color = comment.color;
-        danmakuElement.style.fontSize = `${Danmaku.FONT_SIZE * this.fontSizeMultiplier}px`;
+        danmakuElement.style.fontSize = `${this.fontSize * this.fontSizeMultiplier}px`;
         danmakuElement.style.opacity = this.opacityLevel.toString();
 
         this.container.appendChild(danmakuElement);
@@ -482,8 +485,8 @@ export class Danmaku {
                 element.style.transform = `translateX(-50%)`;
                 break;
             case ScrollMode.BOTTOM: {
-                const totalLanes = Math.floor((this.lastKnownHeight || this.videoPlayer.offsetHeight) / Danmaku.LANE_HEIGHT);
-                danmakuComment.y = (totalLanes - 1 - layout.lane) * Danmaku.LANE_HEIGHT;
+                const totalLanes = Math.floor((this.lastKnownHeight || this.videoPlayer.offsetHeight) / this.laneHeight);
+                danmakuComment.y = (totalLanes - 1 - layout.lane) * this.laneHeight;
                 element.style.top = `${danmakuComment.y}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
@@ -603,6 +606,7 @@ export class Danmaku {
 
     public setFontSize(percent: number): void {
         this.fontSizeMultiplier = Math.max(0.1, percent / 100);
+        this.laneHeight = Math.floor(this.fontSize * this.fontSizeMultiplier * 1.2);
         this.calculateLayouts();
         this.resyncCommentQueue();
     }
