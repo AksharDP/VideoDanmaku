@@ -30,11 +30,11 @@ export class DanmakuInput {
     // Settings controls
     private densityOptions!: NodeListOf<HTMLElement>;
     private speedSlider!: HTMLInputElement;
-    private speedValue!: HTMLElement;
+    private speedValue!: HTMLInputElement;
     private opacitySlider!: HTMLInputElement;
-    private opacityValue!: HTMLElement;
+    private opacityValue!: HTMLInputElement;
     private fontSizeSlider!: HTMLInputElement;
-    private fontSizeValue!: HTMLElement;
+    private fontSizeValue!: HTMLInputElement;
 
     private selectedColor = "#ffffff";
     private selectedPosition: ScrollMode = ScrollMode.SLIDE;
@@ -130,9 +130,9 @@ export class DanmakuInput {
         this.updateDensityUI(this.selectedDensity);
 
         // Initialize slider positions
-        this.updateSliderPosition(this.speedSlider, this.speedValue);
-        this.updateSliderPosition(this.opacitySlider, this.opacityValue);
-        this.updateSliderPosition(this.fontSizeSlider, this.fontSizeValue);
+        this.speedValue.value = this.speedPercent.toString();
+        this.opacityValue.value = this.opacityPercent.toString();
+        this.fontSizeValue.value = this.fontSizePercent.toString();
 
         chrome.storage.local.get("danmakuEnabled", ({ danmakuEnabled }) => {
             const isEnabled = danmakuEnabled !== false;
@@ -309,22 +309,52 @@ export class DanmakuInput {
 
         this.speedSlider.addEventListener("input", () => {
             this.speedPercent = parseInt(this.speedSlider.value, 10);
-            this.speedValue.textContent = `${this.speedPercent}%`;
-            this.updateSliderPosition(this.speedSlider, this.speedValue);
+            this.speedValue.value = this.speedPercent.toString();
+            this.danmaku.setSpeed(this.speedPercent);
+        });
+
+        this.speedValue.addEventListener("change", () => {
+            let value = parseInt(this.speedValue.value, 10);
+            if (isNaN(value)) value = 100;
+            if (value < 0) value = 0;
+            if (value > 200) value = 200;
+            this.speedPercent = value;
+            this.speedValue.value = value.toString();
+            this.speedSlider.value = value.toString();
             this.danmaku.setSpeed(this.speedPercent);
         });
 
         this.opacitySlider.addEventListener("input", () => {
             this.opacityPercent = parseInt(this.opacitySlider.value, 10);
-            this.opacityValue.textContent = `${this.opacityPercent}%`;
-            this.updateSliderPosition(this.opacitySlider, this.opacityValue);
+            this.opacityValue.value = this.opacityPercent.toString();
+            this.danmaku.setOpacity(this.opacityPercent);
+        });
+
+        this.opacityValue.addEventListener("change", () => {
+            let value = parseInt(this.opacityValue.value, 10);
+            if (isNaN(value)) value = 100;
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+            this.opacityPercent = value;
+            this.opacityValue.value = value.toString();
+            this.opacitySlider.value = value.toString();
             this.danmaku.setOpacity(this.opacityPercent);
         });
 
         this.fontSizeSlider.addEventListener("input", () => {
             this.fontSizePercent = parseInt(this.fontSizeSlider.value, 10);
-            this.fontSizeValue.textContent = `${this.fontSizePercent}%`;
-            this.updateSliderPosition(this.fontSizeSlider, this.fontSizeValue);
+            this.fontSizeValue.value = this.fontSizePercent.toString();
+            this.danmaku.setFontSize(this.fontSizePercent);
+        });
+
+        this.fontSizeValue.addEventListener("change", () => {
+            let value = parseInt(this.fontSizeValue.value, 10);
+            if (isNaN(value)) value = 100;
+            if (value < 0) value = 0;
+            if (value > 200) value = 200;
+            this.fontSizePercent = value;
+            this.fontSizeValue.value = value.toString();
+            this.fontSizeSlider.value = value.toString();
             this.danmaku.setFontSize(this.fontSizePercent);
         });
     }

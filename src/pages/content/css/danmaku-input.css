@@ -485,18 +485,49 @@
 }
 
 .slider-labels {
-    position: relative;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 12px;
     color: rgba(255, 255, 255, 0.7);
     margin-top: 4px;
 }
 
+.slider-value-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    /* This ensures the container itself doesn't stretch */
+    flex-shrink: 0;
+}
+
+.slider-labels > span {
+    flex: 1; /* Allows the labels to grow and fill available space */
+}
+
+.slider-labels > span:last-of-type {
+    text-align: right; /* Aligns "200%" to the right */
+}
+
 .slider-current-value {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    font-weight: 500;
+    width: 50px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background-color: #1a1a1a;
     color: #fff;
+    text-align: center;
+    appearance: textfield;
+    -moz-appearance: textfield; /* Firefox */
+}
+
+.slider-current-value::-webkit-outer-spin-button,
+.slider-current-value::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.slider-value-container span {
+    color: rgba(255, 255, 255, 0.7);
 }
