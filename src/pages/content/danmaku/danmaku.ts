@@ -150,7 +150,7 @@ export class Danmaku {
             const speed = (containerWidth + textWidth + containerWidth / 5) / (duration / 1000); // Convert duration to seconds for speed calculation
 
             let assignedLane = -1;
-            let layoutStartTime = comment.time; // Comment time is now in milliseconds
+            let layoutStartTime = comment.time;
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
                 let bestLane = -1;
@@ -163,15 +163,12 @@ export class Danmaku {
                     }
                 }
 
-                // Change: Instead of skipping, delay startTime if needed to fit the lane
                 layoutStartTime = Math.max(comment.time, earliestAvailableTime);
                 assignedLane = bestLane;
 
-                // This is when the comment's right edge enters the screen from the right.
-                // The lane is free for another comment as soon as this one's tail is on screen.
                 const entryTime = layoutStartTime + (textWidth / speed) * 1000;
                 laneTracker[ScrollMode.SLIDE][assignedLane] = entryTime + densityDelay;
-            } else { // TOP or BOTTOM
+            } else {
                 const lanes = laneTracker[comment.scrollMode];
                 let bestLane = -1;
                 let earliestFinishTime = Infinity;
