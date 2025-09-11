@@ -3,19 +3,16 @@ export enum DensityMode {
     NORMAL = "normal",
     DENSE = "dense"
 }
-
+// delay in milliseconds
 export const DensityConfig = {
     [DensityMode.SPARSE]: {
         delay: 300,
-        description: "Sparse - 300 millisecond delay between comments on same lane"
     },
     [DensityMode.NORMAL]: {
         delay: 100,
-        description: "Normal - 100 millisecond delay between comments on same lane"
     },
     [DensityMode.DENSE]: {
-        delay: 0,
-        description: "Dense - No delay between comments"
+        delay: 20,
     }
 } as const;
 
