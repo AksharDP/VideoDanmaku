@@ -475,7 +475,7 @@ export class DanmakuInput {
             this.showError("Video ID not found.");
             return;
         }
-        const currentTime = this.danmaku.videoPlayer.currentTime;
+        const currentTime = this.danmaku.videoPlayer.currentTime * 1000;
         if (currentTime < 0) {
             this.showError("Video is not playing.");
             return;
