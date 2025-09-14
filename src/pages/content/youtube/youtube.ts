@@ -115,9 +115,9 @@ export class YouTubeAdapter implements SiteAdapter {
         videoPlayer: HTMLVideoElement,
         danmaku: Danmaku
     ): Promise<void> {
-        const onPlay = () => danmaku.play();
-        const onPause = () => danmaku.pause();
-        const onSeek = () => danmaku.resyncCommentQueue();
+        // const onPlay = () => danmaku.play();
+        // const onPause = () => danmaku.pause();
+        // const onSeek = () => danmaku.resyncCommentQueue();
 
         const onLoadedMetadata = async () => {
             chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {
@@ -150,15 +150,15 @@ export class YouTubeAdapter implements SiteAdapter {
             });
         };
 
-        videoPlayer.addEventListener("play", onPlay);
-        videoPlayer.addEventListener("pause", onPause);
-        videoPlayer.addEventListener("seeked", onSeek);
+        // videoPlayer.addEventListener("play", onPlay);
+        // videoPlayer.addEventListener("pause", onPause);
+        // videoPlayer.addEventListener("seeked", onSeek);
         videoPlayer.addEventListener("loadedmetadata", onLoadedMetadata);
 
         danmaku.setVideoEventListeners([
-            { event: "play", listener: onPlay },
-            { event: "pause", listener: onPause },
-            { event: "seeked", listener: onSeek },
+            // { event: "play", listener: onPlay },
+            // { event: "pause", listener: onPause },
+            // { event: "seeked", listener: onSeek },
             { event: "loadedmetadata", listener: onLoadedMetadata },
         ]);
 
