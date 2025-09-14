@@ -93,3 +93,30 @@
         background-position: 100% 100%;
     }
 }
+
+.danmaku-comment-popup {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+    padding: 5px;
+    display: none;
+    z-index: 999;
+    gap: 5px;
+    transform: translateX(-50%); 
+}
+
+.danmaku-popup-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.danmaku-popup-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: white;
+}

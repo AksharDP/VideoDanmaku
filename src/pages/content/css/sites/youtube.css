@@ -190,7 +190,7 @@
     border: none;
 }
 
-.danmaku-comment-popup {
+/* .danmaku-comment-popup {
     position: absolute;
     bottom: -50px;
     left: 50%;
@@ -230,7 +230,7 @@
 .danmaku-popup-button:hover {
     background-color: var(--yt-spec-10-percent-layer);
     border-color: var(--yt-spec-call-to-action);
-}
+} */
 
 /* Report modal specific styling for YouTube */
 .danmaku-report-form {
