@@ -547,14 +547,6 @@ export class Danmaku {
         }
     };
 
-    private startMouseTracking(): void {
-        window.addEventListener('mousemove', this.handleMouseMove);
-    }
-
-    private stopMouseTracking(): void {
-        window.removeEventListener('mousemove', this.handleMouseMove);
-    }
-
     private handleMouseMove = (event: MouseEvent): void => {
         this.currentMouseX = event.clientX;
         this.currentMouseY = event.clientY;
