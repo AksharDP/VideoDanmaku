@@ -499,12 +499,22 @@ export class Danmaku {
         this.popupElement.appendChild(reportButton);
         this.container.appendChild(this.popupElement);
 
-        this.container.addEventListener('mouseover', this.handleContainerMouseOver);
-        this.container.addEventListener('mouseout', this.handleContainerMouseOut);
+        // Use passive event listeners where possible
+        this.container.addEventListener('mouseover', this.handleContainerMouseOver, { passive: true });
+        this.container.addEventListener('mouseout', this.handleContainerMouseOut, { passive: true });
+
+        this.popupElement.addEventListener('mouseenter', () => {
+            if (this.popupElement) {
+                this.popupElement.classList.add('hover'); // Keep popup open
+            }
+        });
 
         this.popupElement.addEventListener('mouseleave', () => {
             this.hidePopup();
-        });
+        }, { passive: true });
+
+        // Start global mouse tracking once
+        window.addEventListener('mousemove', this.handleMouseMove, { passive: true });
     }
 
     private handleContainerMouseOver = (event: MouseEvent): void => {
@@ -514,15 +524,12 @@ export class Danmaku {
             if (!isNaN(commentId)) {
                 const comment = this.activeComments.find(c => c.id === commentId);
                 if (comment) {
-                    // Clear any existing show timeout
                     if (this.showPopupTimeout) clearTimeout(this.showPopupTimeout);
-                    // Start tracking mouse position
-                    this.startMouseTracking();
-                    // Set new timeout to show popup after 500ms
+                    this.currentMouseX = event.clientX;
+                    this.currentMouseY = event.clientY;
                     this.showPopupTimeout = window.setTimeout(() => {
                         this.showPopup(this.currentMouseX, this.currentMouseY, comment);
                         this.showPopupTimeout = null;
-                        this.stopMouseTracking();
                     }, 200);
                 }
             }
@@ -530,13 +537,11 @@ export class Danmaku {
     };
 
     private handleContainerMouseOut = (event: MouseEvent): void => {
-        const target = event.target as HTMLElement;
-        if (target.classList.contains('danmaku-comment')) {
-            // Clear the show timeout
+        const relatedTarget = event.relatedTarget as HTMLElement;
+        if (this.popupElement && !this.popupElement.contains(relatedTarget)) {
             if (this.showPopupTimeout) {
                 clearTimeout(this.showPopupTimeout);
                 this.showPopupTimeout = null;
-                this.stopMouseTracking();
             }
             this.hidePopup();
         }
@@ -558,72 +563,68 @@ export class Danmaku {
     private showPopup(clientX: number, clientY: number, comment: DanmakuComment): void {
         this.hoveredComment = comment;
         comment.isPaused = true;
+
         if (!this.popupElement) return;
+
         // Update button actions
         const copyBtn = this.popupElement.querySelector('.copy-btn') as HTMLElement;
         const reportBtn = this.popupElement.querySelector('.report-btn') as HTMLElement;
+
         copyBtn.onclick = (e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(comment.content);
+            navigator.clipboard.writeText(comment.content).catch(err => console.warn('Copy failed:', err));
         };
+
         reportBtn.onclick = (e) => {
             e.stopPropagation();
             this.reportModal.show(comment);
         };
-        // --- POSITIONING LOGIC ---
-        const commentRect = comment.element.getBoundingClientRect();
+
+        // Measure once
+        const popupRect = this.popupElement.getBoundingClientRect();
+        const popupHeight = popupRect.height;
+        const popupWidth = popupRect.width;
+
         const containerRect = this.container.getBoundingClientRect();
+        const commentRect = comment.element.getBoundingClientRect();
         const controlsRect = this.controls.getBoundingClientRect();
 
         const containerStyle = window.getComputedStyle(this.container);
-        const paddingTop = parseFloat(containerStyle.paddingTop);
-        const paddingBottom = parseFloat(containerStyle.paddingBottom);
-        const paddingLeft = parseFloat(containerStyle.paddingLeft);
-        const paddingRight = parseFloat(containerStyle.paddingRight);
-        const borderTop = parseFloat(containerStyle.borderTopWidth);
-        const borderBottom = parseFloat(containerStyle.borderBottomWidth);
-        const borderLeft = parseFloat(containerStyle.borderLeftWidth);
-        const borderRight = parseFloat(containerStyle.borderRightWidth);
+        const paddingTop = parseFloat(containerStyle.paddingTop) || 0;
+        const paddingBottom = parseFloat(containerStyle.paddingBottom) || 0;
+        const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+        const borderTop = parseFloat(containerStyle.borderTopWidth) || 0;
+        const borderBottom = parseFloat(containerStyle.borderBottomWidth) || 0;
+        const borderLeft = parseFloat(containerStyle.borderLeftWidth) || 0;
 
         const adjustmentV = borderTop + paddingTop;
         const adjustmentH = borderLeft + paddingLeft;
         const adjustmentVBottom = borderBottom + paddingBottom;
-        const adjustmentHRight = borderRight + paddingRight;
 
         const effectiveHeight = containerRect.height || this.lastKnownHeight || this.videoPlayer.getBoundingClientRect().height;
         const effectiveWidth = containerRect.width || this.lastKnownWidth || this.videoPlayer.getBoundingClientRect().width;
 
         const contentHeight = effectiveHeight - adjustmentV - adjustmentVBottom;
-        const contentWidth = effectiveWidth - adjustmentH - adjustmentHRight;
+        const contentWidth = effectiveWidth - adjustmentH * 2; // assuming symmetrical padding/border
 
         const availableHeight = contentHeight - (controlsRect.height + 10); // 10px margin
 
         const relativeCommentTop = commentRect.top - containerRect.top - adjustmentV;
         const relativeCommentBottom = commentRect.bottom - containerRect.top - adjustmentV;
 
-        // Make popup visible to measure its dimensions
-        this.popupElement.style.visibility = 'hidden';
-        this.popupElement.style.display = 'block';
-        const popupRect = this.popupElement.getBoundingClientRect();
-        const popupHeight = popupRect.height;
-        const popupWidth = popupRect.width;
-
         // Calculate preferred positions, preferring below
         let top = relativeCommentBottom;
         if (top + popupHeight > availableHeight) {
-            // Doesn't fit below, try placing above
             const aboveTop = relativeCommentTop - popupHeight;
             if (aboveTop >= 0) {
                 top = aboveTop;
             } else {
-                // Neither fits, adjust to fit below
                 top = availableHeight - popupHeight;
             }
         }
 
         // Position horizontally centered on the cursor
         let left = clientX - containerRect.left - adjustmentH;
-        // Adjust to prevent overflow, considering the translateX(-50%)
         const halfPopupWidth = popupWidth / 2;
         if (left - halfPopupWidth < 0) {
             left = halfPopupWidth;
@@ -631,23 +632,7 @@ export class Danmaku {
             left = contentWidth - halfPopupWidth;
         }
 
-        console.log({
-            commentId: comment.id,
-            commentContent: comment.content,
-            commentRect: { top: commentRect.top, left: commentRect.left, width: commentRect.width, height: commentRect.height },
-            containerRect: { top: containerRect.top, left: containerRect.left, width: containerRect.width, height: containerRect.height },
-            controlsRect: { height: controlsRect.height },
-            containerStyle: { paddingTop, paddingBottom, paddingLeft, paddingRight, borderTop, borderBottom, borderLeft, borderRight },
-            adjustments: { adjustmentV, adjustmentH, adjustmentVBottom, adjustmentHRight },
-            effectiveDimensions: { effectiveHeight, effectiveWidth },
-            contentDimensions: { contentHeight, contentWidth },
-            availableHeight,
-            relativePositions: { relativeCommentTop, relativeCommentBottom },
-            popupDimensions: { popupHeight, popupWidth },
-            calculatedPositions: { top, left },
-            finalPositions: { top: `${top}px`, left: `${left}px` }
-        });
-
+        // Batch DOM updates
         this.popupElement.style.top = `${top}px`;
         this.popupElement.style.left = `${left}px`;
         this.popupElement.style.visibility = 'visible';
@@ -661,6 +646,7 @@ export class Danmaku {
         }
         if (this.popupElement) {
             this.popupElement.style.display = 'none';
+            this.popupElement.style.visibility = 'hidden';
         }
     }
 
