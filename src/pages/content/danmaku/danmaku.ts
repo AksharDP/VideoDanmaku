@@ -33,7 +33,8 @@ export class Danmaku {
     private nextEmitIndex: number = 0;
 
     private isRunning = false;
-    private lastTimestamp = 0;
+    private isResyncing = false;
+    private lastTimestamp: number = 0;
     private animationFrameId: number | null = null;
     private videoEventListeners: VideoEventListener[] = [];
     private reportModal: ReportModal;
@@ -244,7 +245,13 @@ export class Danmaku {
     }
 
     public resyncCommentQueue(): void {
-        if (this.commentLayout.length === 0) return;
+        if (this.isResyncing) return;
+        this.isResyncing = true;
+
+        if (this.commentLayout.length === 0) {
+            this.isResyncing = false;
+            return;
+        }
         console.log('[Danmaku] resyncCommentQueue: Resynchronizing comment queue with video time. ' + this.commentLayout);
         const currentTime = this.videoPlayer.currentTime * 1000;
         console.log(`[Danmaku] resyncCommentQueue: Resyncing to video time ${currentTime.toFixed(2)}ms.`);
@@ -269,6 +276,7 @@ export class Danmaku {
         }
         console.log(`[Danmaku] resyncCommentQueue: Re-emitted ${reEmittedCount} comments that should be on screen.`);
         this.lastTimestamp = 0;
+        this.isResyncing = false;
     }
 
     private findFirstLayoutAfter(time: number): number {
