@@ -34,6 +34,7 @@ export class Danmaku {
 
     private isRunning = false;
     private isResyncing = false;
+    private needsResync = false;
     private lastTimestamp: number = 0;
     private animationFrameId: number | null = null;
     private videoEventListeners: VideoEventListener[] = [];
@@ -52,6 +53,7 @@ export class Danmaku {
     // --- Observers and Timers ---
     private resizeObserver: ResizeObserver | null = null;
     private resizeTimeoutId: number | null = null;
+    private resyncTimeoutId: number | null = null;
     private lastKnownWidth: number = 0;
     private lastKnownHeight: number = 0;
 
@@ -245,13 +247,7 @@ export class Danmaku {
     }
 
     public resyncCommentQueue(): void {
-        if (this.isResyncing) return;
-        this.isResyncing = true;
-
-        if (this.commentLayout.length === 0) {
-            this.isResyncing = false;
-            return;
-        }
+        if (this.commentLayout.length === 0) return;
         console.log('[Danmaku] resyncCommentQueue: Resynchronizing comment queue with video time. ' + this.commentLayout);
         const currentTime = this.videoPlayer.currentTime * 1000;
         console.log(`[Danmaku] resyncCommentQueue: Resyncing to video time ${currentTime.toFixed(2)}ms.`);
@@ -276,7 +272,15 @@ export class Danmaku {
         }
         console.log(`[Danmaku] resyncCommentQueue: Re-emitted ${reEmittedCount} comments that should be on screen.`);
         this.lastTimestamp = 0;
-        this.isResyncing = false;
+    }
+
+    private debouncedResync = () => {
+        if (this.resyncTimeoutId) {
+            clearTimeout(this.resyncTimeoutId);
+        }
+        this.resyncTimeoutId = window.setTimeout(() => {
+            this.resyncCommentQueue();
+        }, 50); // 50ms debounce time
     }
 
     private findFirstLayoutAfter(time: number): number {
@@ -298,7 +302,7 @@ export class Danmaku {
         console.log('[Danmaku] resize: Detected resize. Recalculating layouts and resyncing queue.');
         if (this.allComments.length > 0) {
             this.calculateLayouts();
-            this.resyncCommentQueue();
+            this.debouncedResync();
         }
     }
 
@@ -642,7 +646,7 @@ export class Danmaku {
         const listeners: VideoEventListener[] = [
             { event: "play", listener: () => this.play() },
             { event: "pause", listener: () => this.pause() },
-            { event: "seeked", listener: () => this.resyncCommentQueue() },
+            { event: "seeked", listener: () => this.debouncedResync() },
             { event: "waiting", listener: () => this.pause() },
             { event: "playing", listener: () => this.play() },
         ];
