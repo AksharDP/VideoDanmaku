@@ -87,9 +87,20 @@ export class Danmaku {
         const tempCanvas = createCanvas(500, 50);
         this.tempCanvasContext = tempCanvas.getContext('2d');
 
+        // Comprehensive logging
+        console.log('[Danmaku] Constructor: Instance created.');
+        console.log('[Danmaku] Constructor: Initial values set', {
+            fontSize: this.fontSize,
+            laneHeight: this.laneHeight,
+        });
+
         if (videoPlayer && container) {
             this.lastKnownWidth = container.offsetWidth;
             this.lastKnownHeight = container.offsetHeight;
+            console.log('[Danmaku] Constructor: Container and videoPlayer provided. Initializing listeners and observers.', {
+                lastKnownWidth: this.lastKnownWidth,
+                lastKnownHeight: this.lastKnownHeight
+            });
             this.addVideoEventListeners();
             this.setupResizeObserver();
             this.setupWindowResizeListener();
@@ -102,10 +113,17 @@ export class Danmaku {
      * pre-calculates their layout, and prepares them for rendering.
      */
     public setComments(comments: Comment[]): void {
+        console.log(`[Danmaku] setComments: Received ${comments.length} comments.`);
         this.allComments = comments.sort((a, b) => a.time - b.time);
+        console.log('[Danmaku] setComments: Comments sorted by time.');
         this.calculateLayouts();
         this.nextEmitIndex = 0;
         this.commentsCount = this.allComments.length;
+        console.log('[Danmaku] setComments: Setup complete.', {
+            nextEmitIndex: this.nextEmitIndex,
+            commentsCount: this.commentsCount,
+            layoutCount: this.commentLayout.length
+        });
     }
 
     public getComments(): Comment[] {
@@ -117,12 +135,13 @@ export class Danmaku {
      * them a specific lane and start time based on availability, preventing overlaps.
      */
     private calculateLayouts(): void {
+        console.log('[Danmaku] calculateLayouts: Starting layout calculation.');
         const containerWidth = this.container.offsetWidth || this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
         const screenHeight = this.lastKnownHeight || this.videoPlayer.offsetHeight;
         const laneCount = (Math.floor(screenHeight / this.laneHeight) || 10) - 1;
-        const densityDelay = DensityConfig[this.densityMode].delay;
         const duration = this.DURATION / this.speedMultiplier;
-        const halfDuration = duration / 2; // Cached for fixed modes
+
+        console.log('[Danmaku] calculateLayouts: Parameters', { containerWidth, screenHeight, laneCount, duration, densityMode: this.densityMode });
 
         this.tempCanvasContext.font = `${this.fontSize * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
 
@@ -136,10 +155,12 @@ export class Danmaku {
 
         for (const comment of this.allComments) {
             const textWidth = this.tempCanvasContext.measureText(comment.content).width;
-            const speed = (containerWidth + textWidth + containerWidth / 5) / (duration / 1000); // Convert duration to seconds for speed calculation
+            const speed = (containerWidth + textWidth + containerWidth / 5) / (duration / 1000);
 
             let assignedLane = -1;
             let layoutStartTime = comment.time;
+            const densityDelay = DensityConfig[this.densityMode].delay;
+            const halfDuration = duration / 2;
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
                 let bestLane = -1;
@@ -155,7 +176,7 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, earliestAvailableTime);
                 assignedLane = bestLane;
 
-                const entryTime = layoutStartTime + (textWidth / speed) * 1000;
+                const entryTime = layoutStartTime + ((textWidth + 25) / speed) * 1000; // 25px buffer
                 laneTracker[ScrollMode.SLIDE][assignedLane] = entryTime + densityDelay;
             } else {
                 const lanes = laneTracker[comment.scrollMode];
@@ -185,6 +206,7 @@ export class Danmaku {
         }
 
         this.commentLayout = newLayout.sort((a, b) => a.startTime - b.startTime);
+        console.log(`[Danmaku] calculateLayouts: Finished. Calculated ${this.commentLayout.length} layouts.`);
     }
 
     private getDuration(layout: DanmakuLayoutInfo): number {
@@ -195,26 +217,26 @@ export class Danmaku {
 
     public play(): void {
         if (this.isRunning || !this.isVisible) return;
+        console.log('[Danmaku] play: Starting animation loop.');
         this.isRunning = true;
-    
-        // Resume animations
+
         this.container.querySelectorAll('.danmaku-comment').forEach(el => {
             (el as HTMLElement).style.animationPlayState = 'running';
         });
-    
-        this.lastTimestamp = 0; // Reset for animation loop
+
+        this.lastTimestamp = 0;
         this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
-    
+
     public pause(): void {
         if (!this.isRunning) return;
+        console.log('[Danmaku] pause: Stopping animation loop.');
         this.isRunning = false;
-    
-        // Pause animations
+
         this.container.querySelectorAll('.danmaku-comment').forEach(el => {
             (el as HTMLElement).style.animationPlayState = 'paused';
         });
-    
+
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
@@ -222,15 +244,18 @@ export class Danmaku {
     }
 
     public resyncCommentQueue(): void {
-        if (this.allComments.length === 0) return;
-        const currentTime = this.videoPlayer.currentTime * 1000; // Convert to milliseconds
-        
-        // Clear all visible comments
+        if (this.commentLayout.length === 0) return;
+        console.log('[Danmaku] resyncCommentQueue: Resynchronizing comment queue with video time. ' + this.commentLayout);
+        const currentTime = this.videoPlayer.currentTime * 1000;
+        console.log(`[Danmaku] resyncCommentQueue: Resyncing to video time ${currentTime.toFixed(2)}ms.`);
+
         this.container.querySelectorAll('.danmaku-comment').forEach(el => this.returnElementToPool(el as HTMLElement));
+        console.log('[Danmaku] resyncCommentQueue: Cleared all visible comments from DOM.');
 
         this.nextEmitIndex = this.findFirstLayoutAfter(currentTime);
+        console.log(`[Danmaku] resyncCommentQueue: Next comment to be emitted is at index ${this.nextEmitIndex}.`);
 
-        // Re-emit comments that should still be on screen
+        let reEmittedCount = 0;
         for (let i = 0; i < this.nextEmitIndex; i++) {
             const layout = this.commentLayout[i];
             const duration = this.getDuration(layout);
@@ -238,14 +263,16 @@ export class Danmaku {
                 const comment = this.allComments.find(c => c.id === layout.commentId);
                 if (comment) {
                     this.emitComment(comment, layout);
+                    reEmittedCount++;
                 }
             }
         }
-
-        this.lastTimestamp = 0; // Reset timestamp for smooth animation start
+        console.log(`[Danmaku] resyncCommentQueue: Re-emitted ${reEmittedCount} comments that should be on screen.`);
+        this.lastTimestamp = 0;
     }
 
     private findFirstLayoutAfter(time: number): number {
+        // Binary search to find the first comment that should appear after the current time
         let low = 0;
         let high = this.commentLayout.length;
         while (low < high) {
@@ -260,6 +287,7 @@ export class Danmaku {
     }
 
     public resize(): void {
+        console.log('[Danmaku] resize: Detected resize. Recalculating layouts and resyncing queue.');
         if (this.allComments.length > 0) {
             this.calculateLayouts();
             this.resyncCommentQueue();
@@ -267,6 +295,7 @@ export class Danmaku {
     }
 
     public show(): void {
+        console.log('[Danmaku] show: Making comments visible.');
         this.container.style.display = "";
         this.isVisible = true;
         if (!this.videoPlayer.paused) {
@@ -275,6 +304,7 @@ export class Danmaku {
     }
 
     public hide(): void {
+        console.log('[Danmaku] hide: Hiding comments.');
         this.container.style.display = "none";
         this.isVisible = false;
         this.pause();
@@ -282,6 +312,7 @@ export class Danmaku {
 
     public toggleVisibility(force?: boolean): boolean {
         this.isVisible = force ?? !this.isVisible;
+        console.log(`[Danmaku] toggleVisibility: Visibility set to ${this.isVisible}.`);
         if (this.isVisible) {
             this.show();
             this.resyncCommentQueue();
@@ -292,6 +323,7 @@ export class Danmaku {
     }
 
     public addComment(comment: Comment): void {
+        console.log('[Danmaku] addComment: Adding new comment.', { comment });
         const insertIndex = this.allComments.findIndex(c => c.time > comment.time);
         if (insertIndex === -1) {
             this.allComments.push(comment);
@@ -308,6 +340,7 @@ export class Danmaku {
     }
 
     public reinitialize(videoPlayer: HTMLVideoElement): void {
+        console.log('[Danmaku] reinitialize: Reinitializing with a new video player.');
         this.pause();
         this.clear();
 
@@ -318,14 +351,13 @@ export class Danmaku {
 
         this.videoPlayer = videoPlayer;
         this.resize();
-
         this.addVideoEventListeners();
-
         this.cleanupResizeObserver();
         this.setupResizeObserver();
     }
 
     public destroy(): void {
+        console.log('[Danmaku] destroy: Destroying instance, cleaning up all resources.');
         this.pause();
         this.clear();
         this.videoEventListeners.forEach(({ event, listener }) => {
@@ -333,36 +365,32 @@ export class Danmaku {
         });
         this.videoEventListeners = [];
 
-        // NEW: Cleanup container listeners and popup
         this.container.removeEventListener('mouseover', this.handleContainerMouseOver);
         this.container.removeEventListener('mouseout', this.handleContainerMouseOut);
         this.popupElement?.remove();
 
-        // Clear any pending timeouts
         if (this.showPopupTimeout) clearTimeout(this.showPopupTimeout);
 
         this.cleanupResizeObserver();
         this.cleanupWindowResizeListener();
-
         this.commentPool = [];
     }
 
     public clear(): void {
+        console.log('[Danmaku] clear: Clearing all comments and layouts.');
         this.allComments = [];
         this.commentLayout = [];
         this.nextEmitIndex = 0;
         this.commentsCount = 0;
-        this.container.innerHTML = ''; // Make sure to clear the DOM
+        this.container.innerHTML = '';
     }
 
     private animationLoop(timestamp: number): void {
         if (!this.isRunning) return;
-
         this.emitNewComments();
-
         this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
-    
+
     private emitNewComments(): void {
         if (!this.videoPlayer) return;
         const currentTime = this.videoPlayer.currentTime * 1000;
@@ -378,25 +406,18 @@ export class Danmaku {
 
     private emitComment(comment: Comment, layout: DanmakuLayoutInfo): void {
         try {
+            // console.log(`[Danmaku] emitComment: Emitting comment ID ${comment.id}`, { layout });
             const danmakuElement = this.getElementFromPool(comment);
-            
             this.setInitialPosition(danmakuElement, layout);
-            
-            // Add animation class
             danmakuElement.classList.add(`danmaku-animation-${layout.scrollMode}`);
-            
-            // If the video is paused, start the comment in a paused state
             if (this.videoPlayer.paused) {
                 danmakuElement.style.animationPlayState = 'paused';
             }
-    
-            // Remove the element after animation ends
             danmakuElement.addEventListener('animationend', () => {
                 this.returnElementToPool(danmakuElement);
             }, { once: true });
-    
         } catch (error) {
-            console.error(`Failed to emit comment ${comment.id}:`, error);
+            console.error(`[Danmaku] emitComment: Failed to emit comment ${comment.id}:`, error);
         }
     }
 
@@ -404,25 +425,23 @@ export class Danmaku {
         let danmakuElement: HTMLElement;
         if (this.commentPool.length > 0) {
             danmakuElement = this.commentPool.pop()!;
-            danmakuElement.innerHTML = '';
             danmakuElement.removeAttribute('style');
             danmakuElement.className = 'danmaku-comment';
         } else {
             danmakuElement = document.createElement("div");
             danmakuElement.className = "danmaku-comment";
         }
-    
+
         danmakuElement.textContent = comment.content;
         danmakuElement.style.color = comment.color;
         danmakuElement.style.fontSize = `${this.fontSize * this.fontSizeMultiplier}px`;
         danmakuElement.style.opacity = this.opacityLevel.toString();
-        
         danmakuElement.dataset.commentId = comment.id.toString();
-    
+
         this.container.appendChild(danmakuElement);
         return danmakuElement;
     }
-    
+
     private setInitialPosition(element: HTMLElement, layout: DanmakuLayoutInfo): void {
         const currentTime = this.videoPlayer.currentTime * 1000;
         const timeSinceStart = currentTime - layout.startTime;
@@ -432,22 +451,21 @@ export class Danmaku {
 
         switch (layout.scrollMode) {
             case ScrollMode.SLIDE: {
-                const y = layout.lane * this.laneHeight;
-                element.style.top = `${y}px`;
+                element.style.top = `${layout.lane * this.laneHeight}px`;
                 if (timeSinceStart > 0) {
-                    const progress = timeSinceStart / duration;
-                    const startX = this.container.offsetWidth;
-                    const endX = -layout.width;
-                    const currentX = startX + (endX - startX) * progress;
-                    element.style.transform = `translateX(${currentX}px)`;
+                    // This logic is now handled by animation-delay.
+                    // To correctly handle resync, we set a negative animation-delay.
+                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
                 }
                 break;
             }
             case ScrollMode.TOP: {
-                const y = layout.lane * this.laneHeight;
-                element.style.top = `${y}px`;
+                element.style.top = `${layout.lane * this.laneHeight}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
+                if (timeSinceStart > 0) {
+                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
+                }
                 break;
             }
             case ScrollMode.BOTTOM: {
@@ -456,6 +474,9 @@ export class Danmaku {
                 element.style.top = `${y}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
+                 if (timeSinceStart > 0) {
+                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
+                }
                 break;
             }
         }
@@ -464,7 +485,6 @@ export class Danmaku {
     private returnElementToPool(element: HTMLElement): void {
         element.remove();
         if (this.commentPool.length < this.maxPoolSize) {
-            // Reset crucial properties before pooling
             element.removeAttribute('style');
             element.className = 'danmaku-comment';
             this.commentPool.push(element);
@@ -474,6 +494,7 @@ export class Danmaku {
     // --- NEW: Popup Interaction Logic ---
 
     private initializePopup(): void {
+        console.log('[Danmaku] initializePopup: Creating and appending popup element.');
         this.popupElement = document.createElement("div");
         this.popupElement.className = "danmaku-comment-popup";
 
@@ -489,21 +510,17 @@ export class Danmaku {
         this.popupElement.appendChild(reportButton);
         this.container.appendChild(this.popupElement);
 
-        // Use passive event listeners where possible
         this.container.addEventListener('mouseover', this.handleContainerMouseOver, { passive: true });
         this.container.addEventListener('mouseout', this.handleContainerMouseOut, { passive: true });
 
         this.popupElement.addEventListener('mouseenter', () => {
-            if (this.popupElement) {
-                this.popupElement.classList.add('hover'); // Keep popup open
-            }
+            if (this.popupElement) this.popupElement.classList.add('hover');
         });
 
         this.popupElement.addEventListener('mouseleave', () => {
             this.hidePopup();
         }, { passive: true });
 
-        // Start global mouse tracking once
         window.addEventListener('mousemove', this.handleMouseMove, { passive: true });
     }
 
@@ -544,71 +561,53 @@ export class Danmaku {
     
     private showPopup(clientX: number, clientY: number, element: HTMLElement, commentData: Comment): void {
         if (!commentData) return;
-    
+        console.log(`[Danmaku] showPopup: Showing popup for comment ID ${commentData.id}`);
+
         this.hoveredComment = { element, isPaused: true, commentId: commentData.id, scrollMode: commentData.scrollMode };
         element.style.animationPlayState = 'paused';
-    
+
         if (!this.popupElement) return;
-    
+
         const copyBtn = this.popupElement.querySelector('.copy-btn') as HTMLElement;
         const reportBtn = this.popupElement.querySelector('.report-btn') as HTMLElement;
-    
+
         copyBtn.onclick = (e) => {
             e.stopPropagation();
             navigator.clipboard.writeText(element.textContent || '').catch(err => console.warn('Copy failed:', err));
         };
-    
         reportBtn.onclick = (e) => {
             e.stopPropagation();
             this.reportModal.show(commentData);
         };
-    
-        const popupRect = this.popupElement.getBoundingClientRect();
-        const popupHeight = popupRect.height;
-        const popupWidth = popupRect.width;
 
+        const popupRect = this.popupElement.getBoundingClientRect();
         const containerRect = this.container.getBoundingClientRect();
         const commentRect = element.getBoundingClientRect();
         const controlsRect = this.controls.getBoundingClientRect();
 
-        const containerStyle = window.getComputedStyle(this.container);
-        const paddingTop = parseFloat(containerStyle.paddingTop) || 0;
-        const paddingBottom = parseFloat(containerStyle.paddingBottom) || 0;
-        const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
-        const borderTop = parseFloat(containerStyle.borderTopWidth) || 0;
-        const borderBottom = parseFloat(containerStyle.borderBottomWidth) || 0;
-        const borderLeft = parseFloat(containerStyle.borderLeftWidth) || 0;
+        const availableHeight = containerRect.height - (controlsRect.height + 10);
 
-        const adjustmentV = borderTop + paddingTop;
-        const adjustmentH = borderLeft + paddingLeft;
-        const adjustmentVBottom = borderBottom + paddingBottom;
+        const relativeCommentTop = commentRect.top - containerRect.top;
+        const relativeCommentBottom = commentRect.bottom - containerRect.top;
 
-        const effectiveHeight = containerRect.height || this.lastKnownHeight || this.videoPlayer.getBoundingClientRect().height;
-        const effectiveWidth = containerRect.width || this.lastKnownWidth || this.videoPlayer.getBoundingClientRect().width;
+        console.log('[Danmaku] showPopup: Positioning calculations', {
+            popupRect, containerRect, commentRect, controlsRect, availableHeight, relativeCommentTop, relativeCommentBottom
+        });
 
-        const contentHeight = effectiveHeight - adjustmentV - adjustmentVBottom;
-        const contentWidth = effectiveWidth - adjustmentH * 2; // assuming symmetrical padding/border
-
-        const availableHeight = contentHeight - (controlsRect.height + 10); // 10px margin
-
-        const relativeCommentTop = commentRect.top - containerRect.top - adjustmentV;
-        const relativeCommentBottom = commentRect.bottom - containerRect.top - adjustmentV;
-
-        // Calculate preferred positions, preferring below
         let top = relativeCommentBottom;
-        if (top + popupHeight > availableHeight) {
-            const aboveTop = relativeCommentTop - popupHeight;
+        if (top + popupRect.height > availableHeight) {
+            const aboveTop = relativeCommentTop - popupRect.height;
             if (aboveTop >= 0) {
                 top = aboveTop;
             } else {
-                top = availableHeight - popupHeight;
+                top = availableHeight - popupRect.height;
             }
         }
     
-        // Position horizontally centered on the cursor and clamp
-        let left = clientX - containerRect.left - (popupWidth / 2);
-        left = Math.max(0, Math.min(left, containerRect.width - popupWidth));
+        let left = clientX - containerRect.left - (popupRect.width / 2);
+        left = Math.max(0, Math.min(left, containerRect.width - popupRect.width));
     
+        console.log('[Danmaku] showPopup: Final position calculated', { top, left });
         this.popupElement.style.top = `${top}px`;
         this.popupElement.style.left = `${left}px`;
         this.popupElement.style.visibility = 'visible';
@@ -617,7 +616,7 @@ export class Danmaku {
     
     private hidePopup(): void {
         if (this.hoveredComment) {
-            // Only resume animation if the video is playing
+            console.log(`[Danmaku] hidePopup: Hiding popup for comment ID ${this.hoveredComment.commentId}`);
             if (!this.videoPlayer.paused) {
                 this.hoveredComment.element.style.animationPlayState = 'running';
             }
@@ -635,7 +634,7 @@ export class Danmaku {
         const listeners: VideoEventListener[] = [
             { event: "play", listener: () => this.play() },
             { event: "pause", listener: () => this.pause() },
-            { event: "seeking", listener: () => this.resyncCommentQueue() },
+            { event: "seeked", listener: () => this.resyncCommentQueue() },
             { event: "waiting", listener: () => this.pause() },
             { event: "playing", listener: () => this.play() },
         ];
@@ -643,6 +642,7 @@ export class Danmaku {
             this.videoPlayer.addEventListener(event, listener);
             this.videoEventListeners.push({ event, listener });
         });
+        console.log(`[Danmaku] addVideoEventListeners: Added ${listeners.length} listeners to the video player.`);
     }
 
     private setupResizeObserver(): void {
@@ -650,6 +650,7 @@ export class Danmaku {
             if (entries && entries.length > 0) {
                 const { width, height } = entries[0].contentRect;
                 if (width !== this.lastKnownWidth || height !== this.lastKnownHeight) {
+                    console.log(`[Danmaku] ResizeObserver: Detected container size change to ${width}x${height}.`);
                     this.lastKnownWidth = width;
                     this.lastKnownHeight = height;
                     this.resize();
@@ -659,18 +660,18 @@ export class Danmaku {
             }
         });
         this.resizeObserver.observe(this.videoPlayer);
+        console.log('[Danmaku] setupResizeObserver: Observer is now watching the video player.');
     }
 
     private cleanupResizeObserver(): void {
         this.resizeObserver?.disconnect();
         this.resizeObserver = null;
+        console.log('[Danmaku] cleanupResizeObserver: Observer disconnected.');
     }
 
     private setupWindowResizeListener(): void {
         window.addEventListener('resize', this.handleWindowResize);
     }
-
-
 
     private cleanupWindowResizeListener(): void {
         window.removeEventListener('resize', this.handleWindowResize);
@@ -687,25 +688,28 @@ export class Danmaku {
 
     public setSpeed(percent: number): void {
         this.speedMultiplier = Math.max(0.1, percent / 100);
+        console.log(`[Danmaku] setSpeed: Speed multiplier set to ${this.speedMultiplier}.`);
         this.calculateLayouts();
         this.resyncCommentQueue();
     }
 
     public setDensity(density: DensityMode): void {
         this.densityMode = density;
+        console.log(`[Danmaku] setDensity: Density mode set to '${this.densityMode}'.`);
         this.calculateLayouts();
         this.resyncCommentQueue();
     }
 
     public setOpacity(percent: number): void {
         this.opacityLevel = percent / 100;
+        console.log(`[Danmaku] setOpacity: Opacity level set to ${this.opacityLevel}.`);
         this.container.style.opacity = this.opacityLevel.toString();
-        // The opacity for individual comments is now set when they are created
     }
 
     public setFontSize(percent: number): void {
         this.fontSizeMultiplier = Math.max(0.1, percent / 100);
         this.laneHeight = Math.floor(this.fontSize * this.fontSizeMultiplier * 1.2);
+        console.log(`[Danmaku] setFontSize: Font size multiplier set to ${this.fontSizeMultiplier}, new lane height is ${this.laneHeight}px.`);
         this.calculateLayouts();
         this.resyncCommentQueue();
     }
