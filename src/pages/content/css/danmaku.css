@@ -16,9 +16,7 @@
 }
 
 /* Base animation properties */
-.danmaku-animation-slide,
-.danmaku-animation-top,
-.danmaku-animation-bottom {
+.danmaku-animation-slide {
     animation-duration: var(--danmaku-duration, 7s);
     animation-timing-function: linear;
     animation-fill-mode: forwards;
@@ -30,13 +28,11 @@
 }
 
 .danmaku-animation-top {
-    animation-name: fade;
     left: 50%;
     transform: translateX(-50%);
 }
 
 .danmaku-animation-bottom {
-    animation-name: fade;
     left: 50%;
     transform: translateX(-50%);
 }
@@ -47,15 +43,6 @@
     }
     to {
         transform: translateX(-100%);
-    }
-}
-
-@keyframes fade {
-    0%, 100% {
-        opacity: 0;
-    }
-    10%, 90% {
-        opacity: 1;
     }
 }
 
