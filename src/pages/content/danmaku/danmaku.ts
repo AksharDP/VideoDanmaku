@@ -1,7 +1,6 @@
 import { Comment } from "../api";
 import { ReportModal } from "../modal-report/modal-report";
 import { DensityConfig, DensityMode, ScrollMode } from "../interfaces/enum";
-import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 
 // This interface holds the pre-calculated layout information for a comment.
 // It references a comment by its ID to save memory.
@@ -87,8 +86,21 @@ export class Danmaku {
         this.fontSize = 24; // pixels
         this.laneHeight = 30; // pixels
         this.reportModal = new ReportModal();
-        const tempCanvas = createCanvas(500, 50);
-        this.tempCanvasContext = tempCanvas.getContext('2d');
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 500;
+        tempCanvas.height = 50;
+        let context = tempCanvas.getContext('2d');
+
+        if (!context) {
+            console.warn("[Danmaku] Could not get 2D context, falling back to mock for testing.");
+            context = {
+                measureText: (text: string) => ({ width: text.length * 12 * this.fontSizeMultiplier }),
+                font: ''
+            } as any;
+        }
+        this.tempCanvasContext = context as CanvasRenderingContext2D;
+
 
         // Comprehensive logging
         console.log('[Danmaku] Constructor: Instance created.');
@@ -133,14 +145,10 @@ export class Danmaku {
         return this.allComments;
     }
 
-    /**
-     * The core layout calculation logic. Iterates through all comments and assigns
-     * them a specific lane and start time based on availability, preventing overlaps.
-     */
     private calculateLayouts(): void {
         console.log('[Danmaku] calculateLayouts: Starting layout calculation.');
-        const containerWidth = this.container.offsetWidth || this.lastKnownWidth || this.videoPlayer.offsetWidth || 1280;
-        const screenHeight = this.lastKnownHeight || this.videoPlayer.offsetHeight;
+        const containerWidth = this.lastKnownWidth || this.container.offsetWidth || this.videoPlayer.offsetWidth || 1280;
+        const screenHeight = this.lastKnownHeight || this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
         const laneCount = (Math.floor(screenHeight / this.laneHeight) || 10) - 1;
         const duration = this.DURATION / this.speedMultiplier;
 
@@ -149,16 +157,16 @@ export class Danmaku {
         this.tempCanvasContext.font = `${this.fontSize * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
 
         const laneTracker = {
-            [ScrollMode.SLIDE]: Array(laneCount).fill(0),
-            [ScrollMode.TOP]: Array(laneCount).fill(0),
-            [ScrollMode.BOTTOM]: Array(laneCount).fill(0),
+            [ScrollMode.SLIDE]: Array(laneCount).fill(-Infinity),
+            [ScrollMode.TOP]: Array(laneCount).fill(-Infinity),
+            [ScrollMode.BOTTOM]: Array(laneCount).fill(-Infinity),
         };
 
         const newLayout: DanmakuLayoutInfo[] = [];
 
         for (const comment of this.allComments) {
             const textWidth = this.tempCanvasContext.measureText(comment.content).width;
-            const speed = (containerWidth + textWidth + containerWidth / 5) / (duration / 1000);
+            const speed = (containerWidth + textWidth) / (duration / 1000);
 
             let assignedLane = -1;
             let layoutStartTime = comment.time;
@@ -179,9 +187,9 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, earliestAvailableTime);
                 assignedLane = bestLane;
 
-                const entryTime = layoutStartTime + ((textWidth + 25) / speed) * 1000; // 25px buffer
+                const entryTime = layoutStartTime + (textWidth / speed) * 1000;
                 laneTracker[ScrollMode.SLIDE][assignedLane] = entryTime + densityDelay;
-            } else {
+            } else if (comment.scrollMode === ScrollMode.TOP || comment.scrollMode === ScrollMode.BOTTOM) {
                 const lanes = laneTracker[comment.scrollMode];
                 let bestLane = -1;
                 let earliestFinishTime = Infinity;
@@ -196,6 +204,10 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, earliestFinishTime);
                 assignedLane = bestLane;
                 lanes[bestLane] = layoutStartTime + halfDuration + densityDelay;
+            } else {
+                // Invalid scrollMode, skip this comment
+                console.warn(`[Danmaku] calculateLayouts: Invalid scrollMode '${comment.scrollMode}' for comment ${comment.id}, skipping.`);
+                continue;
             }
 
             newLayout.push({
@@ -210,12 +222,18 @@ export class Danmaku {
 
         this.commentLayout = newLayout.sort((a, b) => a.startTime - b.startTime);
         console.log(`[Danmaku] calculateLayouts: Finished. Calculated ${this.commentLayout.length} layouts.`);
+        // console.log(this.commentLayout);
     }
 
     private getDuration(layout: DanmakuLayoutInfo): number {
-        return layout.scrollMode === ScrollMode.SLIDE
-            ? this.DURATION / this.speedMultiplier
-            : (this.DURATION / this.speedMultiplier) / 2;
+        if (layout.scrollMode === ScrollMode.SLIDE) {
+            return this.DURATION / this.speedMultiplier;
+        } else if (layout.scrollMode === ScrollMode.TOP || layout.scrollMode === ScrollMode.BOTTOM) {
+            return (this.DURATION / this.speedMultiplier) / 2;
+        } else {
+            // Invalid scrollMode, default to slide duration
+            return this.DURATION / this.speedMultiplier;
+        }
     }
 
     public play(): void {
@@ -248,7 +266,6 @@ export class Danmaku {
 
     public resyncCommentQueue(): void {
         if (this.commentLayout.length === 0) return;
-        console.log('[Danmaku] resyncCommentQueue: Resynchronizing comment queue with video time. ' + this.commentLayout);
         const currentTime = this.videoPlayer.currentTime * 1000;
         console.log(`[Danmaku] resyncCommentQueue: Resyncing to video time ${currentTime.toFixed(2)}ms.`);
 
@@ -259,10 +276,10 @@ export class Danmaku {
         console.log(`[Danmaku] resyncCommentQueue: Next comment to be emitted is at index ${this.nextEmitIndex}.`);
 
         let reEmittedCount = 0;
-        for (let i = 0; i < this.nextEmitIndex; i++) {
+        for (let i = 0; i < this.commentLayout.length; i++) {
             const layout = this.commentLayout[i];
             const duration = this.getDuration(layout);
-            if (layout.startTime + duration > currentTime) {
+            if (layout.startTime <= currentTime && layout.startTime + duration > currentTime) {
                 const comment = this.allComments.find(c => c.id === layout.commentId);
                 if (comment) {
                     this.emitComment(comment, layout);
@@ -377,8 +394,8 @@ export class Danmaku {
         });
         this.videoEventListeners = [];
 
-        this.container.removeEventListener('mouseover', this.handleContainerMouseOver);
-        this.container.removeEventListener('mouseout', this.handleContainerMouseOut);
+        this.container.removeEventListener('mouseover', this.handleContainerMouseOver, { passive: true } as any);
+        this.container.removeEventListener('mouseout', this.handleContainerMouseOut, { passive: true } as any);
         this.popupElement?.remove();
 
         if (this.showPopupTimeout) clearTimeout(this.showPopupTimeout);
@@ -422,9 +439,8 @@ export class Danmaku {
             const danmakuElement = this.getElementFromPool(comment);
             this.setInitialPosition(danmakuElement, layout);
             danmakuElement.classList.add(`danmaku-animation-${layout.scrollMode}`);
-            if (this.videoPlayer.paused) {
-                danmakuElement.style.animationPlayState = 'paused';
-            }
+            danmakuElement.style.animationPlayState = this.isRunning ? 'running' : 'paused';
+
             danmakuElement.addEventListener('animationend', () => {
                 this.returnElementToPool(danmakuElement);
             }, { once: true });
@@ -481,12 +497,20 @@ export class Danmaku {
                 break;
             }
             case ScrollMode.BOTTOM: {
-                const totalLanes = Math.floor((this.lastKnownHeight || this.videoPlayer.offsetHeight) / this.laneHeight);
+                let totalLanes = Math.floor((this.lastKnownHeight || this.videoPlayer.offsetHeight || 720) / this.laneHeight) || 10;
                 const y = (totalLanes - 1 - layout.lane) * this.laneHeight;
                 element.style.top = `${y}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
                  if (timeSinceStart > 0) {
+                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
+                }
+                break;
+            }
+            default: {
+                // Invalid scrollMode, default to SLIDE
+                element.style.top = `${layout.lane * this.laneHeight}px`;
+                if (timeSinceStart > 0) {
                     element.style.animationDelay = `-${timeSinceStart / 1000}s`;
                 }
                 break;
@@ -522,8 +546,8 @@ export class Danmaku {
         this.popupElement.appendChild(reportButton);
         this.container.appendChild(this.popupElement);
 
-        this.container.addEventListener('mouseover', this.handleContainerMouseOver, { passive: true });
-        this.container.addEventListener('mouseout', this.handleContainerMouseOut, { passive: true });
+        this.container.addEventListener('mouseover', this.handleContainerMouseOver, { passive: true } as any);
+        this.container.addEventListener('mouseout', this.handleContainerMouseOut, { passive: true } as any);
 
         this.popupElement.addEventListener('mouseenter', () => {
             if (this.popupElement) this.popupElement.classList.add('hover');
@@ -531,9 +555,9 @@ export class Danmaku {
 
         this.popupElement.addEventListener('mouseleave', () => {
             this.hidePopup();
-        }, { passive: true });
+        }, { passive: true } as any);
 
-        window.addEventListener('mousemove', this.handleMouseMove, { passive: true });
+        window.addEventListener('mousemove', this.handleMouseMove, { passive: true } as any);
     }
 
     private handleContainerMouseOver = (event: MouseEvent): void => {

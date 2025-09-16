@@ -15,7 +15,8 @@
     "dev": "bun run nodemon --config nodemon.chrome.json",
     "dev:chrome": "bun run nodemon --config nodemon.chrome.json",
     "dev:firefox": "bun run nodemon --config nodemon.firefox.json",
-    "lint": "bun run eslint --ext .ts,.tsx src"
+    "lint": "bun run eslint --ext .ts,.tsx src",
+    "test": "bun test"
   },
   "type": "module",
   "dependencies": {
