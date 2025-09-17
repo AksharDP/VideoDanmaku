@@ -23,20 +23,6 @@
 }
 
 /* Specific Animations */
-.danmaku-animation-slide {
-    animation-name: slide;
-}
-
-.danmaku-animation-top {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.danmaku-animation-bottom {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
 @keyframes slide {
     from {
         transform: translateX(100vw);
@@ -44,6 +30,28 @@
     to {
         transform: translateX(-100%);
     }
+}
+
+.danmaku-animation-slide {
+    animation-name: slide;
+}
+
+
+@keyframes topBottomFade {
+    99% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.danmaku-animation-top, .danmaku-animation-bottom {
+    left: 50%;
+    transform: translateX(-50%);
+    animation-duration: var(--danmaku-duration, 7s);
+    animation-name: topBottomFade;
+    animation-fill-mode: forwards;
 }
 
 
