@@ -4,28 +4,20 @@ import { Danmaku } from "../src/pages/content/danmaku/danmaku";
 import { Comment } from "../src/pages/content/api";
 import { DensityMode, ScrollMode, FontSize } from "../src/pages/content/interfaces/enum";
 
-const unsortedComments: Comment[] = [
-    { id: 1, content: "Quick brown fox jumps.", time: 7, color: "#1A2B3C", userId: 5, scrollMode: ScrollMode.TOP, fontSize: FontSize.NORMAL },
-    { id: 2, content: "Lorem ipsum dolor sit.", time: 3, color: "#4D5E6F", userId: 12, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.SMALL },
-    { id: 3, content: "Vivamus sagittis nunc.", time: 12, color: "#7F8A9B", userId: 3, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.LARGE },
-    { id: 4, content: "Pellentesque porttitor mauris.", time: 15, color: "#2C3D4E", userId: 8, scrollMode: ScrollMode.TOP, fontSize: FontSize.SMALL },
-    { id: 5, content: "Consectetur adipiscing elit.", time: 1, color: "#9AB0C1", userId: 14, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.NORMAL },
-    { id: 6, content: "Nulla hendrerit quam.", time: 9, color: "#D4E5F6", userId: 2, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.NORMAL },
-    { id: 7, content: "Sed fermentum nulla.", time: 6, color: "#112233", userId: 19, scrollMode: ScrollMode.TOP, fontSize: FontSize.LARGE },
-    { id: 8, content: "Quisque non turpis.", time: 14, color: "#445566", userId: 7, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.SMALL },
-    { id: 9, content: "Aenean vitae ullamcorper.", time: 5, color: "#778899", userId: 1, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.NORMAL },
-    { id: 10, content: "Fusce nec nibh.", time: 0, color: "#AABBCC", userId: 16, scrollMode: ScrollMode.TOP, fontSize: FontSize.SMALL },
-    { id: 11, content: "Dolor sit amet consectetur.", time: 11, color: "#DDEEFF", userId: 10, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.LARGE },
-    { id: 12, content: "Etiam sagittis nunc.", time: 2, color: "#001122", userId: 4, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.NORMAL },
-    { id: 13, content: "Pellentesque euismod.", time: 13, color: "#334455", userId: 18, scrollMode: ScrollMode.TOP, fontSize: FontSize.SMALL },
-    { id: 14, content: "Mauris quis turpis.", time: 8, color: "#667788", userId: 6, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.NORMAL },
-    { id: 15, content: "Curabitur sit amet.", time: 4, color: "#99AABB", userId: 13, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.LARGE },
-    { id: 16, content: "Integer luctus nulla.", time: 7, color: "#CCDDEE", userId: 9, scrollMode: ScrollMode.TOP, fontSize: FontSize.NORMAL },
-    { id: 17, content: "Nam porta sapien.", time: 10, color: "#FFAA00", userId: 15, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.SMALL },
-    { id: 18, content: "Felis euismod.", time: 3, color: "#00BBFF", userId: 11, scrollMode: ScrollMode.BOTTOM, fontSize: FontSize.NORMAL },
-    { id: 19, content: "Sed blandit felis.", time: 12, color: "#CC33AA", userId: 17, scrollMode: ScrollMode.TOP, fontSize: FontSize.LARGE },
-    { id: 20, content: "Nunc eu urna.", time: 5, color: "#336699", userId: 20, scrollMode: ScrollMode.SLIDE, fontSize: FontSize.NORMAL }
-];
+const unsortedComments: Comment[] = Array.from({ length: 100 }, (_, i) => {
+    const scrollModes = [ScrollMode.TOP, ScrollMode.BOTTOM, ScrollMode.SLIDE];
+    const fontSizes = [FontSize.SMALL, FontSize.NORMAL, FontSize.LARGE];
+    const colors = ["#1A2B3C", "#4D5E6F", "#7F8A9B", "#2C3D4E", "#9AB0C1", "#D4E5F6", "#112233", "#445566", "#778899", "#AABBCC"];
+    return {
+        id: i + 1,
+        content: `Comment ${i + 1}`,
+        time: (i * 30000) / 100, // Spread times evenly from 0 up to just under 30000 ms
+        color: colors[i % colors.length],
+        userId: (i % 20) + 1,
+        scrollMode: scrollModes[i % 3],
+        fontSize: fontSizes[i % 3]
+    };
+});
 
 describe("Danmaku Core Functionality", () => {
 
@@ -452,5 +444,50 @@ describe("Danmaku Edge Cases and Synchronization", () => {
         danmaku.destroy();
         expect((danmaku as any).allComments.length).toBe(0);
         expect((danmaku as any).commentLayout.length).toBe(0);
+    });
+
+    test("TOP comments fill topmost lanes first", () => {
+        // Create 5 top comments with the same time so they should fill lanes 0,1,2,3,4
+        const topComments: Comment[] = Array.from({ length: 5 }, (_, i) => ({
+            id: i + 1,
+            content: `Top ${i + 1}`,
+            time: 0,
+            color: "#FFF",
+            userId: 1,
+            scrollMode: ScrollMode.TOP,
+            fontSize: FontSize.NORMAL
+        }));
+        danmaku.setComments(topComments);
+        const layout = (danmaku as any).commentLayout;
+        // Lanes should be 0,1,2,3,4 (topmost lanes)
+        const lanes = layout.map((l: any) => l.lane).sort((a: number, b: number) => a - b);
+        expect(lanes).toEqual([0,1,2,3,4]);
+    });
+
+    test("BOTTOM comments fill bottommost lanes first", () => {
+        // Create 5 bottom comments with the same time so they should fill lanes 0,1,2,3,4 (but bottom lanes are reversed in rendering)
+        const bottomComments: Comment[] = Array.from({ length: 5 }, (_, i) => ({
+            id: i + 1,
+            content: `Bottom ${i + 1}`,
+            time: 0,
+            color: "#FFF",
+            userId: 1,
+            scrollMode: ScrollMode.BOTTOM,
+            fontSize: FontSize.NORMAL
+        }));
+        danmaku.setComments(bottomComments);
+        const layout = (danmaku as any).commentLayout;
+        // Lanes should be 0,1,2,3,4 (bottommost lanes, but rendering is reversed)
+        const lanes = layout.map((l: any) => l.lane).sort((a: number, b: number) => a - b);
+        expect(lanes).toEqual([0,1,2,3,4]);
+        // Check that the rendered top position is correct for bottom comments
+        const totalLanes = Math.floor(720 / (danmaku as any).laneHeight);
+        layout.forEach((l: any) => {
+            const expectedTop = (totalLanes - 1 - l.lane) * (danmaku as any).laneHeight;
+            // Simulate emitComment and check top position
+            const el = document.createElement('div');
+            (danmaku as any).setInitialPosition(el, l);
+            expect(el.style.top).toBe(`${expectedTop}px`);
+        });
     });
 });
