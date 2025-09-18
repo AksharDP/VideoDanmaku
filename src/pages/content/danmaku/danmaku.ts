@@ -20,7 +20,7 @@ type VideoEventListener = {
 
 // noinspection D
 export class Danmaku {
-    private container: HTMLElement; 
+    private container: HTMLElement;
     public videoPlayer: HTMLVideoElement;
     private controls: HTMLElement;
 
@@ -180,16 +180,30 @@ export class Danmaku {
             let layoutStartTime = comment.time;
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
-                // Find best lane for sliding comments (iterating 0 -> N-1)
-                const bestLaneResult = slideLaneTracker.reduce((acc, laneTime, index) => {
-                    if (laneTime < acc.earliestTime) {
-                        return { earliestTime: laneTime, laneIndex: index };
-                    }
-                    return acc;
-                }, { earliestTime: Infinity, laneIndex: -1 });
+                let bestLane = -1;
+                let earliestStartTime = Infinity;
 
-                layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
-                assignedLane = bestLaneResult.laneIndex;
+                for (let i = 0; i < slideLaneTracker.length; i++) {
+                    // Calculate the potential start time for the comment in this lane.
+                    // It's either the comment's own time or the time the lane becomes free, whichever is later.
+                    const potentialStartTime = Math.max(comment.time, slideLaneTracker[i]);
+
+                    // If this lane allows the comment to start earlier than any other lane found so far,
+                    // it becomes the new best option.
+                    if (potentialStartTime < earliestStartTime) {
+                        earliestStartTime = potentialStartTime;
+                        bestLane = i;
+
+                        // Optimization: If a lane is available at the comment's exact time,
+                        // it's the topmost and best possible option, so we can stop searching.
+                        if (earliestStartTime === comment.time) {
+                            break;
+                        }
+                    }
+                }
+
+                layoutStartTime = earliestStartTime;
+                assignedLane = bestLane;
 
                 if (assignedLane !== -1) {
                     const entryTime = layoutStartTime + (textWidth / speed) * 1000;
