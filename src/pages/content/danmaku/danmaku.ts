@@ -165,10 +165,9 @@ export class Danmaku {
 
         this.tempCanvasContext.font = `${this.fontSize * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
 
-        // Separate trackers for each scroll mode type
+        // Separate tracker for sliding, shared tracker for top/bottom
         const slideLaneTracker = Array(laneCount).fill(-Infinity);
-        const topLaneTracker = Array(laneCount).fill(-Infinity);
-        const bottomLaneTracker = Array(laneCount).fill(-Infinity);
+        const topBottomLaneTracker = Array(laneCount).fill(-Infinity);
 
         const newLayout: DanmakuLayoutInfo[] = [];
 
@@ -180,7 +179,7 @@ export class Danmaku {
             let layoutStartTime = comment.time;
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
-                // Find best lane for sliding comments
+                // Find best lane for sliding comments (iterating 0 -> N-1)
                 const bestLaneResult = slideLaneTracker.reduce((acc, laneTime, index) => {
                     if (laneTime < acc.earliestTime) {
                         return { earliestTime: laneTime, laneIndex: index };
@@ -191,13 +190,14 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
                 assignedLane = bestLaneResult.laneIndex;
 
-                // Update tracker with the time the comment fully enters the screen
-                const entryTime = layoutStartTime + (textWidth / speed) * 1000;
-                slideLaneTracker[assignedLane] = entryTime + densityDelay;
+                if (assignedLane !== -1) {
+                    const entryTime = layoutStartTime + (textWidth / speed) * 1000;
+                    slideLaneTracker[assignedLane] = entryTime + densityDelay;
+                }
 
             } else if (comment.scrollMode === ScrollMode.TOP) {
-                // Find best lane for top-pinned comments using its own tracker
-                const bestLaneResult = topLaneTracker.reduce((acc, laneTime, index) => {
+                // Find best lane for top-pinned comments (iterating 0 -> N-1)
+                const bestLaneResult = topBottomLaneTracker.reduce((acc, laneTime, index) => {
                     if (laneTime < acc.earliestTime) {
                         return { earliestTime: laneTime, laneIndex: index };
                     }
@@ -207,23 +207,28 @@ export class Danmaku {
                 layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
                 assignedLane = bestLaneResult.laneIndex;
 
-                // Update tracker with the time the comment disappears
-                topLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                if (assignedLane !== -1) {
+                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                }
 
             } else if (comment.scrollMode === ScrollMode.BOTTOM) {
-                // Find best lane for bottom-pinned comments using its own tracker
-                const bestLaneResult = bottomLaneTracker.reduce((acc, laneTime, index) => {
-                    if (laneTime < acc.earliestTime) {
-                        return { earliestTime: laneTime, laneIndex: index };
+                // Find best lane for bottom-pinned comments (iterating N-1 -> 0)
+                let earliestTime = Infinity;
+                let bestLane = -1;
+
+                for (let i = laneCount - 1; i >= 0; i--) {
+                    if (topBottomLaneTracker[i] < earliestTime) {
+                        earliestTime = topBottomLaneTracker[i];
+                        bestLane = i;
                     }
-                    return acc;
-                }, { earliestTime: Infinity, laneIndex: -1 });
+                }
 
-                layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
-                assignedLane = bestLaneResult.laneIndex;
+                layoutStartTime = Math.max(comment.time, earliestTime);
+                assignedLane = bestLane;
 
-                // Update tracker with the time the comment disappears
-                bottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                if (assignedLane !== -1) {
+                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                }
 
             } else {
                 console.warn(`[Danmaku] calculateLayouts: Invalid scrollMode '${comment.scrollMode}' for comment ${comment.id}, skipping.`);
@@ -242,7 +247,6 @@ export class Danmaku {
 
         this.commentLayout = newLayout.sort((a, b) => a.startTime - b.startTime);
         console.log(`[Danmaku] calculateLayouts: Finished. Calculated ${this.commentLayout.length} layouts.`);
-        console.log(this.commentLayout);
     }
 
     private getDuration(layout: DanmakuLayoutInfo): number {
@@ -495,44 +499,34 @@ export class Danmaku {
         const timeSinceStart = currentTime - layout.startTime;
         const duration = this.getDuration(layout);
 
+        // Set CSS variables for timing. These are used by the animation classes in danmaku.css.
         element.style.setProperty('--danmaku-duration', `${duration / 1000}s`);
-        console.log(`[Danmaku] setInitialPosition: Positioning comment ID ${element.dataset.commentId} in lane ${layout.lane} with ${this.laneHeight}px lane height.`);
 
+        if (timeSinceStart > 0) {
+            // A negative delay fast-forwards the animation to the correct starting point for resync.
+            element.style.animationDelay = `-${timeSinceStart / 1000}s`;
+        }
+
+        console.log(`[Danmaku] setInitialPosition: Positioning comment ID ${layout.commentId} in lane ${layout.lane} with scrollMode ${layout.scrollMode}.`);
+
+        // Set the dynamic vertical position. 'left' and 'transform' are now handled by CSS classes.
         switch (layout.scrollMode) {
-            case ScrollMode.SLIDE: {
+            case ScrollMode.SLIDE:
+            case ScrollMode.TOP:
                 element.style.top = `${layout.lane * this.laneHeight}px`;
-                if (timeSinceStart > 0) {
-                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
-                }
                 break;
-            }
-            case ScrollMode.TOP: {
-                element.style.top = `${layout.lane * this.laneHeight}px`;
-                element.style.left = `50%`;
-                element.style.transform = `translateX(-50%)`;
-                if (timeSinceStart > 0) {
-                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
-                }
-                break;
-            }
+
             case ScrollMode.BOTTOM: {
-                let totalLanes = Math.floor((this.lastKnownHeight || this.videoPlayer.offsetHeight || 720) / this.laneHeight) || 10;
-                const y = (totalLanes - 1 - layout.lane) * this.laneHeight;
+                // This logic correctly inverts the lane index to position comments at the bottom of the screen.
+                // const totalLanes = this.calculateLaneCount();
+                const y = layout.lane * this.laneHeight;
                 element.style.top = `${y}px`;
-                element.style.left = `50%`;
-                element.style.transform = `translateX(-50%)`;
-                if (timeSinceStart > 0) {
-                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
-                }
                 break;
             }
-            default: {
+            default:
+                // Fallback for any invalid scroll modes
                 element.style.top = `${layout.lane * this.laneHeight}px`;
-                if (timeSinceStart > 0) {
-                    element.style.animationDelay = `-${timeSinceStart / 1000}s`;
-                }
                 break;
-            }
         }
     }
 
