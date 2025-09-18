@@ -501,14 +501,12 @@ export class Danmaku {
 
         // Set CSS variables for timing. These are used by the animation classes in danmaku.css.
         element.style.setProperty('--danmaku-duration', `${duration / 1000}s`);
-
         if (timeSinceStart > 0) {
             // A negative delay fast-forwards the animation to the correct starting point for resync.
             element.style.animationDelay = `-${timeSinceStart / 1000}s`;
         }
 
         console.log(`[Danmaku] setInitialPosition: Positioning comment ID ${layout.commentId} in lane ${layout.lane} with scrollMode ${layout.scrollMode}.`);
-
         element.style.top = `${layout.lane * this.laneHeight}px`;
     }
 
@@ -663,10 +661,12 @@ export class Danmaku {
     private addVideoEventListeners(): void {
         const listeners: VideoEventListener[] = [
             { event: "play", listener: () => this.play() },
-            { event: "pause", listener: () => this.pause() },
-            { event: "seeked", listener: () => this.debouncedResync() },
-            { event: "waiting", listener: () => this.pause() },
             { event: "playing", listener: () => this.play() },
+            { event: "pause", listener: () => this.pause() },
+            { event: "waiting", listener: () => this.pause() },
+            { event: "stalled", listener: () => this.pause() },
+            { event: "seeking", listener: () => this.pause() },
+            { event: "seeked", listener: () => this.debouncedResync() },
         ];
         listeners.forEach(({ event, listener }) => {
             this.videoPlayer.addEventListener(event, listener);
