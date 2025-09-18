@@ -4,7 +4,7 @@ import { DensityConfig, DensityMode, ScrollMode } from "../interfaces/enum";
 
 // This interface holds the pre-calculated layout information for a comment.
 // It references a comment by its ID to save memory.
-interface DanmakuLayoutInfo {
+export interface DanmakuLayoutInfo {
     commentId: number;
     lane: number;
     startTime: number; // The actual, calculated time the comment should appear on screen (in milliseconds).
@@ -33,7 +33,7 @@ export class Danmaku {
 
     private isRunning = false;
     private isResyncing = false;
-    private needsResync = false;
+    // private needsResync = false;
     private lastTimestamp: number = 0;
     private animationFrameId: number | null = null;
     private videoEventListeners: VideoEventListener[] = [];
@@ -86,7 +86,7 @@ export class Danmaku {
         this.fontSize = 24; // pixels
         this.laneHeight = 30; // pixels
         this.reportModal = new ReportModal();
-        
+
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = 500;
         tempCanvas.height = 50;
@@ -145,65 +145,77 @@ export class Danmaku {
         return this.allComments;
     }
 
+    private calculateLaneCount(): number {
+        const screenHeight = this.lastKnownHeight || this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
+        const controlsHeight = this.controls.offsetHeight || 0;
+        const availableHeight = screenHeight - controlsHeight - 10;
+        console.log(`[Danmaku] calculateLaneCount: Calculated available height ${availableHeight}px with controls height ${controlsHeight}px.`);
+        return Math.floor(availableHeight / this.laneHeight) || 10;
+    }
+
     private calculateLayouts(): void {
         console.log('[Danmaku] calculateLayouts: Starting layout calculation.');
         const containerWidth = this.lastKnownWidth || this.container.offsetWidth || this.videoPlayer.offsetWidth || 1280;
-        const screenHeight = this.lastKnownHeight || this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
-        const laneCount = (Math.floor(screenHeight / this.laneHeight) || 10) - 1;
+        const laneCount = this.calculateLaneCount();
         const duration = this.DURATION / this.speedMultiplier;
+        const densityDelay = DensityConfig[this.densityMode].delay;
+        // const halfDuration = duration / 2;
 
-        console.log('[Danmaku] calculateLayouts: Parameters', { containerWidth, screenHeight, laneCount, duration, densityMode: this.densityMode });
+        console.log('[Danmaku] calculateLayouts: Parameters', { containerWidth, laneCount, duration, densityMode: this.densityMode });
 
         this.tempCanvasContext.font = `${this.fontSize * this.fontSizeMultiplier}px Roboto, Arial, sans-serif`;
 
-        const laneTracker = {
-            [ScrollMode.SLIDE]: Array(laneCount).fill(-Infinity),
-            [ScrollMode.TOP]: Array(laneCount).fill(-Infinity),
-            [ScrollMode.BOTTOM]: Array(laneCount).fill(-Infinity),
-        };
+        const slideLaneTracker = Array(laneCount).fill(-Infinity);
+        const topBottomLaneTracker = Array(laneCount).fill(-Infinity);
+
+        // const laneTracker = {
+        //     [ScrollMode.SLIDE]: slideLaneTracker,
+        //     [ScrollMode.TOP]: topBottomLaneTracker,
+        //     [ScrollMode.BOTTOM]: topBottomLaneTracker,
+        // };
 
         const newLayout: DanmakuLayoutInfo[] = [];
 
         for (const comment of this.allComments) {
+            // Calculate text width and speed once
             const textWidth = this.tempCanvasContext.measureText(comment.content).width;
             const speed = (containerWidth + textWidth) / (duration / 1000);
 
             let assignedLane = -1;
             let layoutStartTime = comment.time;
-            const densityDelay = DensityConfig[this.densityMode].delay;
-            const halfDuration = duration / 2;
 
             if (comment.scrollMode === ScrollMode.SLIDE) {
-                let bestLane = -1;
-                let earliestAvailableTime = Infinity;
-
-                for (let i = 0; i < laneCount; i++) {
-                    if (laneTracker[ScrollMode.SLIDE][i] < earliestAvailableTime) {
-                        earliestAvailableTime = laneTracker[ScrollMode.SLIDE][i];
-                        bestLane = i;
+                // Find best lane using reduce for cleaner logic
+                const bestLaneResult = slideLaneTracker.reduce((acc, laneTime, index) => {
+                    if (laneTime < acc.earliestTime) {
+                        return { earliestTime: laneTime, laneIndex: index };
                     }
-                }
+                    return acc;
+                }, { earliestTime: Infinity, laneIndex: -1 });
 
-                layoutStartTime = Math.max(comment.time, earliestAvailableTime);
-                assignedLane = bestLane;
+                layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
+                assignedLane = bestLaneResult.laneIndex;
 
+                // Update tracker with entry time
                 const entryTime = layoutStartTime + (textWidth / speed) * 1000;
-                laneTracker[ScrollMode.SLIDE][assignedLane] = entryTime + densityDelay;
+                slideLaneTracker[assignedLane] = entryTime + densityDelay;
+
             } else if (comment.scrollMode === ScrollMode.TOP || comment.scrollMode === ScrollMode.BOTTOM) {
-                const lanes = laneTracker[comment.scrollMode];
-                let bestLane = -1;
-                let earliestFinishTime = Infinity;
-
-                for (let i = 0; i < lanes.length; i++) {
-                    if (lanes[i] < earliestFinishTime) {
-                        earliestFinishTime = lanes[i];
-                        bestLane = i;
+                // Find best lane for top/bottom comments
+                const bestLaneResult = topBottomLaneTracker.reduce((acc, laneTime, index) => {
+                    if (laneTime < acc.earliestTime) {
+                        return { earliestTime: laneTime, laneIndex: index };
                     }
-                }
+                    return acc;
+                }, { earliestTime: Infinity, laneIndex: -1 });
 
-                layoutStartTime = Math.max(comment.time, earliestFinishTime);
-                assignedLane = bestLane;
-                lanes[bestLane] = layoutStartTime + halfDuration + densityDelay;
+                layoutStartTime = Math.max(comment.time, bestLaneResult.earliestTime);
+                assignedLane = bestLaneResult.laneIndex;
+
+                // Update tracker with finish time
+                // topBottomLaneTracker[assignedLane] = layoutStartTime + halfDuration + densityDelay;
+                topBottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+
             } else {
                 // Invalid scrollMode, skip this comment
                 console.warn(`[Danmaku] calculateLayouts: Invalid scrollMode '${comment.scrollMode}' for comment ${comment.id}, skipping.`);
@@ -222,14 +234,14 @@ export class Danmaku {
 
         this.commentLayout = newLayout.sort((a, b) => a.startTime - b.startTime);
         console.log(`[Danmaku] calculateLayouts: Finished. Calculated ${this.commentLayout.length} layouts.`);
-        // console.log(this.commentLayout);
+        console.log(this.commentLayout);
     }
 
     private getDuration(layout: DanmakuLayoutInfo): number {
         if (layout.scrollMode === ScrollMode.SLIDE) {
             return this.DURATION / this.speedMultiplier;
         } else if (layout.scrollMode === ScrollMode.TOP || layout.scrollMode === ScrollMode.BOTTOM) {
-            return (this.DURATION / this.speedMultiplier) / 2;
+            return (this.DURATION / this.speedMultiplier);
         } else {
             // Invalid scrollMode, default to slide duration
             return this.DURATION / this.speedMultiplier;
@@ -474,7 +486,7 @@ export class Danmaku {
         const currentTime = this.videoPlayer.currentTime * 1000;
         const timeSinceStart = currentTime - layout.startTime;
         const duration = this.getDuration(layout);
-        
+
         element.style.setProperty('--danmaku-duration', `${duration / 1000}s`);
 
         switch (layout.scrollMode) {
@@ -488,6 +500,7 @@ export class Danmaku {
                 break;
             }
             case ScrollMode.TOP: {
+                console.log(`[Danmaku] setInitialPosition: Positioning TOP comment ID ${element.dataset.commentId} in lane ${layout.lane} with ${this.laneHeight}px lane height.`);
                 element.style.top = `${layout.lane * this.laneHeight}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
@@ -502,7 +515,7 @@ export class Danmaku {
                 element.style.top = `${y}px`;
                 element.style.left = `50%`;
                 element.style.transform = `translateX(-50%)`;
-                 if (timeSinceStart > 0) {
+                if (timeSinceStart > 0) {
                     element.style.animationDelay = `-${timeSinceStart / 1000}s`;
                 }
                 break;
@@ -594,7 +607,7 @@ export class Danmaku {
         this.currentMouseX = event.clientX;
         this.currentMouseY = event.clientY;
     };
-    
+
     private showPopup(clientX: number, clientY: number, element: HTMLElement, commentData: Comment): void {
         if (!commentData) return;
         console.log(`[Danmaku] showPopup: Showing popup for comment ID ${commentData.id}`);
@@ -639,17 +652,17 @@ export class Danmaku {
                 top = availableHeight - popupRect.height;
             }
         }
-    
+
         let left = clientX - containerRect.left - (popupRect.width / 2);
         left = Math.max(0, Math.min(left, containerRect.width - popupRect.width));
-    
+
         console.log('[Danmaku] showPopup: Final position calculated', { top, left });
         this.popupElement.style.top = `${top}px`;
         this.popupElement.style.left = `${left}px`;
         this.popupElement.style.visibility = 'visible';
         this.popupElement.style.display = 'flex';
     }
-    
+
     private hidePopup(): void {
         if (this.hoveredComment) {
             console.log(`[Danmaku] hidePopup: Hiding popup for comment ID ${this.hoveredComment.commentId}`);
