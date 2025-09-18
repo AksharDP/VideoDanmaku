@@ -148,9 +148,10 @@ export class Danmaku {
     private calculateLaneCount(): number {
         const screenHeight = this.lastKnownHeight || this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
         const controlsHeight = this.controls.offsetHeight || 0;
-        const availableHeight = screenHeight - controlsHeight - 10;
-        console.log(`[Danmaku] calculateLaneCount: Calculated available height ${availableHeight}px with controls height ${controlsHeight}px.`);
-        return Math.floor(availableHeight / this.laneHeight) || 10;
+        // const availableHeight = screenHeight - controlsHeight - 5; // 5px padding
+        // const availableHeight = screenHeight
+        console.log(`[Danmaku] calculateLaneCount: Calculated available height ${screenHeight}px with controls height ${controlsHeight}px.`);
+        return Math.floor(screenHeight / this.laneHeight) || 10;
     }
 
     private calculateLayouts(): void {
@@ -608,8 +609,10 @@ export class Danmaku {
             this.reportModal.show(commentData);
         };
 
+        this.popupElement.style.display = 'flex';
         const popupRect = this.popupElement.getBoundingClientRect();
         const containerRect = this.container.getBoundingClientRect();
+        console.log(this.container);
         const commentRect = element.getBoundingClientRect();
         const controlsRect = this.controls.getBoundingClientRect();
 
@@ -619,7 +622,7 @@ export class Danmaku {
         const relativeCommentBottom = commentRect.bottom - containerRect.top;
 
         console.log('[Danmaku] showPopup: Positioning calculations', {
-            popupRect, containerRect, commentRect, controlsRect, availableHeight, relativeCommentTop, relativeCommentBottom
+            popupRect, containerRect: containerRect, commentRect, controlsRect, availableHeight, relativeCommentTop, relativeCommentBottom
         });
 
         let top = relativeCommentBottom;
@@ -632,8 +635,7 @@ export class Danmaku {
             }
         }
 
-        let left = clientX - containerRect.left - (popupRect.width / 2);
-        left = Math.max(0, Math.min(left, containerRect.width - popupRect.width));
+        const left = Math.max(0, Math.min(clientX, containerRect.width - popupRect.width));
 
         console.log('[Danmaku] showPopup: Final position calculated', { top, left });
         this.popupElement.style.top = `${top}px`;
@@ -681,6 +683,7 @@ export class Danmaku {
                 const { width, height } = entries[0].contentRect;
                 if (width !== this.lastKnownWidth || height !== this.lastKnownHeight) {
                     console.log(`[Danmaku] ResizeObserver: Detected container size change to ${width}x${height}.`);
+                    this.container.style.height = `${height}px`;
                     this.lastKnownWidth = width;
                     this.lastKnownHeight = height;
                     this.resize();

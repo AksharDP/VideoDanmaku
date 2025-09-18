@@ -11,10 +11,11 @@ export class YouTubeAdapter implements SiteAdapter {
     public isInitialized: boolean = false;
     private videoId: string | null = null;
     private danmaku: Danmaku | null = null;
+    private videoContainer: HTMLDivElement | null = null;
     private videoPlayer: HTMLVideoElement | null = null;
     private controls: HTMLElement | null = null;
     private loginModal: LoginModal = new LoginModal();
-    private danmakuContainer: HTMLElement | null = null;
+    private danmakuContainer: HTMLDivElement | null = null;
     private danmakuInputContainer: HTMLElement | null = null;
     private danmakuInputInstance: DanmakuInput | null = null;
     private resizeObserver: ResizeObserver | null = null;
@@ -45,6 +46,13 @@ export class YouTubeAdapter implements SiteAdapter {
             );
             this.videoId = newVideoId;
 
+            this.videoContainer = document.querySelector(".html5-video-player");
+
+            if (!this.videoContainer) {
+                console.error("Could not find video container.");
+                return;
+            }
+
             this.videoPlayer = await this.waitForPlayer();
             if (!this.videoPlayer) {
                 console.error("Could not find video player after waiting.");
@@ -61,12 +69,15 @@ export class YouTubeAdapter implements SiteAdapter {
                 console.log("First-time initialization.");
                 this.danmakuContainer = document.createElement("div");
                 this.danmakuContainer.classList.add("danmaku-container");
+                this.danmakuContainer.style.height = `${this.videoPlayer.height}px`;
                 this.videoPlayer.parentElement?.insertBefore(
                     this.danmakuContainer,
                     this.videoPlayer.nextSibling
                 );
 
                 this.danmaku = new Danmaku(
+                    
+                    // this.videoContainer,
                     this.videoPlayer,
                     this.danmakuContainer,
                     this.controls
