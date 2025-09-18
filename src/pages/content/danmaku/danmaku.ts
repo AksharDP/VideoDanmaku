@@ -20,7 +20,7 @@ type VideoEventListener = {
 
 // noinspection D
 export class Danmaku {
-    private container: HTMLElement;
+    private container: HTMLElement; 
     public videoPlayer: HTMLVideoElement;
     private controls: HTMLElement;
 
@@ -209,7 +209,7 @@ export class Danmaku {
                 assignedLane = bestLaneResult.laneIndex;
 
                 if (assignedLane !== -1) {
-                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + (densityDelay / 2);
                 }
 
             } else if (comment.scrollMode === ScrollMode.BOTTOM) {
@@ -228,7 +228,7 @@ export class Danmaku {
                 assignedLane = bestLane;
 
                 if (assignedLane !== -1) {
-                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + densityDelay;
+                    topBottomLaneTracker[assignedLane] = layoutStartTime + duration + (densityDelay / 2);
                 }
 
             } else {
@@ -248,6 +248,12 @@ export class Danmaku {
 
         this.commentLayout = newLayout.sort((a, b) => a.startTime - b.startTime);
         console.log(`[Danmaku] calculateLayouts: Finished. Calculated ${this.commentLayout.length} layouts.`);
+        // Combine layout info with full comment data for detailed logging
+        const detailedLayouts = this.commentLayout.map(layout => {
+            const comment = this.allComments.find(c => c.id === layout.commentId);
+            return { ...layout, ...comment };
+        });
+        console.log(detailedLayouts);
     }
 
     private getDuration(layout: DanmakuLayoutInfo): number {
