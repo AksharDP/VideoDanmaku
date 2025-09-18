@@ -76,7 +76,7 @@ export class Danmaku {
 
     constructor();
     constructor(videoPlayer: HTMLVideoElement, container: HTMLElement);
-
+    constructor(videoPlayer: HTMLVideoElement, container: HTMLElement, controls: HTMLElement);
     constructor(videoPlayer?: HTMLVideoElement, container?: HTMLElement, controls?: HTMLElement) {
 
         this.videoPlayer = videoPlayer || document.createElement("video");

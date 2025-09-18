@@ -12,6 +12,7 @@ export class YouTubeAdapter implements SiteAdapter {
     private videoId: string | null = null;
     private danmaku: Danmaku | null = null;
     private videoPlayer: HTMLVideoElement | null = null;
+    private controls: HTMLElement | null = null;
     private loginModal: LoginModal = new LoginModal();
     private danmakuContainer: HTMLElement | null = null;
     private danmakuInputContainer: HTMLElement | null = null;
@@ -45,9 +46,14 @@ export class YouTubeAdapter implements SiteAdapter {
             this.videoId = newVideoId;
 
             this.videoPlayer = await this.waitForPlayer();
-
             if (!this.videoPlayer) {
                 console.error("Could not find video player after waiting.");
+                return;
+            }
+
+            this.controls = document.querySelector(".ytp-chrome-bottom");
+            if (!this.controls) {
+                console.error("Could not find video controls.");
                 return;
             }
 
@@ -62,7 +68,8 @@ export class YouTubeAdapter implements SiteAdapter {
 
                 this.danmaku = new Danmaku(
                     this.videoPlayer,
-                    this.danmakuContainer
+                    this.danmakuContainer,
+                    this.controls
                 );
                 this.danmakuInputInstance = new DanmakuInput(
                     this.danmaku,
