@@ -509,25 +509,7 @@ export class Danmaku {
 
         console.log(`[Danmaku] setInitialPosition: Positioning comment ID ${layout.commentId} in lane ${layout.lane} with scrollMode ${layout.scrollMode}.`);
 
-        // Set the dynamic vertical position. 'left' and 'transform' are now handled by CSS classes.
-        switch (layout.scrollMode) {
-            case ScrollMode.SLIDE:
-            case ScrollMode.TOP:
-                element.style.top = `${layout.lane * this.laneHeight}px`;
-                break;
-
-            case ScrollMode.BOTTOM: {
-                // This logic correctly inverts the lane index to position comments at the bottom of the screen.
-                // const totalLanes = this.calculateLaneCount();
-                const y = layout.lane * this.laneHeight;
-                element.style.top = `${y}px`;
-                break;
-            }
-            default:
-                // Fallback for any invalid scroll modes
-                element.style.top = `${layout.lane * this.laneHeight}px`;
-                break;
-        }
+        element.style.top = `${layout.lane * this.laneHeight}px`;
     }
 
     private returnElementToPool(element: HTMLElement): void {
