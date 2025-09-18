@@ -254,7 +254,7 @@ export class Danmaku {
         if (layout.scrollMode === ScrollMode.SLIDE) {
             return this.DURATION / this.speedMultiplier;
         } else if (layout.scrollMode === ScrollMode.TOP || layout.scrollMode === ScrollMode.BOTTOM) {
-            return (this.DURATION / this.speedMultiplier);
+            return (this.DURATION / this.speedMultiplier) / 2;
         } else {
             // Invalid scrollMode, default to slide duration
             return this.DURATION / this.speedMultiplier;
