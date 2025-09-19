@@ -129,6 +129,39 @@ export class YouTubeAdapter implements SiteAdapter {
         }
     }
 
+    private onLoadedMetadata = async () => {
+        chrome.storage.local.get(["danmakuEnabled"], async (result) => {
+            if (!this.danmaku) return;
+            const { danmakuEnabled } = result ?? true;
+            console.log("onLoadedMetadata called - danmakuEnabled:", danmakuEnabled, "commentsCount:", this.danmaku.getCommentsCount);
+            if (danmakuEnabled === false) {
+                console.log("Danmaku is disabled, skipping comment load");
+                this.danmakuInputInstance!.updateCommentsStatus(false, 0);
+                return;
+            }
+            if (this.danmaku.getCommentsCount > 0) {
+                console.log("Comments already loaded, skipping API call");
+                this.danmakuInputInstance!.updateCommentsStatus(true, this.danmaku.getCommentsCount);
+                return;
+            }
+
+            console.log("Video metadata loaded. Loading comments.");
+            const videoDuration = this.danmaku.videoPlayer.duration / 60;
+            const limit =
+                videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
+
+            console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
+            const comments = await getComments("youtube", this.videoId!, limit);
+            console.log("Received comments:", comments.length);
+            this.danmaku.setComments(comments);
+            this.danmakuInputInstance!.updateCommentsCount(comments.length);
+
+            if (!this.danmaku.videoPlayer.paused) {
+                this.danmaku.play();
+            }
+        });
+    };
+
     public async setupEventListeners(
         videoPlayer: HTMLVideoElement,
         danmaku: Danmaku
@@ -137,54 +170,25 @@ export class YouTubeAdapter implements SiteAdapter {
         // const onPause = () => danmaku.pause();
         // const onSeek = () => danmaku.resyncCommentQueue();
 
-        const onLoadedMetadata = async () => {
-            chrome.storage.local.get("danmakuEnabled", async ({ danmakuEnabled }) => {
-                console.log("onLoadedMetadata called - danmakuEnabled:", danmakuEnabled, "commentsCount:", danmaku.getCommentsCount);
-                if (danmakuEnabled === false) {
-                    console.log("Danmaku is disabled, skipping comment load");
-                    this.danmakuInputInstance!.updateCommentsStatus(false, 0);
-                    return;
-                }
-                if (danmaku.getCommentsCount > 0) {
-                    console.log("Comments already loaded, skipping API call");
-                    this.danmakuInputInstance!.updateCommentsStatus(true, danmaku.getCommentsCount);
-                    return;
-                }
-
-                console.log("Video metadata loaded. Loading comments.");
-                const videoDuration = videoPlayer.duration / 60;
-                const limit =
-                    videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
-
-                console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
-                const comments = await getComments("youtube", this.videoId!, limit);
-                console.log("Received comments:", comments.length);
-                danmaku.setComments(comments);
-                this.danmakuInputInstance!.updateCommentsCount(comments.length);
-
-                if (!videoPlayer.paused) {
-                    danmaku.play();
-                }
-            });
-        };
+        
 
         // videoPlayer.addEventListener("play", onPlay);
         // videoPlayer.addEventListener("pause", onPause);
         // videoPlayer.addEventListener("seeked", onSeek);
-        videoPlayer.addEventListener("loadedmetadata", onLoadedMetadata);
+        // videoPlayer.addEventListener("loadedmetadata", this.onLoadedMetadata);
 
-        danmaku.setVideoEventListeners([
-            // { event: "play", listener: onPlay },
-            // { event: "pause", listener: onPause },
-            // { event: "seeked", listener: onSeek },
-            { event: "loadedmetadata", listener: onLoadedMetadata },
-        ]);
+        // danmaku.setVideoEventListeners([
+        //     // { event: "play", listener: onPlay },
+        //     // { event: "pause", listener: onPause },
+        //     // { event: "seeked", listener: onSeek },
+        //     { event: "loadedmetadata", listener: onLoadedMetadata },
+        // ]);
 
         if (videoPlayer.readyState >= 1) {
             console.log(
                 "Video metadata was already loaded. Manually triggering comment load."
             );
-            onLoadedMetadata();
+            this.onLoadedMetadata();
         }
 
         if (this.resizeObserver && this.videoElementForObserver) {
@@ -222,6 +226,7 @@ export class YouTubeAdapter implements SiteAdapter {
     public destroy(): void {
         console.log("Destroying existing Danmaku instance...");
         if (this.danmaku) {
+            this.danmaku.videoPlayer.removeEventListener("loadedmetadata", this.onLoadedMetadata);
             this.danmaku.destroy();
         }
         if (this.danmakuContainer) {
@@ -234,6 +239,7 @@ export class YouTubeAdapter implements SiteAdapter {
             this.resizeObserver.unobserve(this.videoElementForObserver);
             this.resizeObserver = null;
         }
+
 
         this.videoPlayer = null;
         this.videoElementForObserver = null;
