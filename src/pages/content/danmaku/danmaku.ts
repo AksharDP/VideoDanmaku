@@ -26,6 +26,7 @@ export class Danmaku {
 
     // Stores the original comment data from the API.
     public allComments: Comment[] = [];
+    public get getCommentsCount(): number { return this.allComments.length; }
     // Stores the pre-calculated layout for every comment, sorted by startTime.
     private commentLayout: DanmakuLayoutInfo[] = [];
 
@@ -39,11 +40,7 @@ export class Danmaku {
     private videoEventListeners: VideoEventListener[] = [];
     private reportModal: ReportModal;
     private isVisible: boolean = true;
-    public get getCommentsCount(): number {
-        return this.commentsCount;
-    }
-    private commentsCount: number = 0;
-
+    
     // --- Constants ---
     private readonly DURATION = 7000; // milliseconds
     private laneHeight: number; // pixels
@@ -133,10 +130,9 @@ export class Danmaku {
         console.log('[Danmaku] setComments: Comments sorted by time.');
         this.calculateLayouts();
         this.nextEmitIndex = 0;
-        this.commentsCount = this.allComments.length;
         console.log('[Danmaku] setComments: Setup complete.', {
             nextEmitIndex: this.nextEmitIndex,
-            commentsCount: this.commentsCount,
+            commentsCount: this.getCommentsCount,
             layoutCount: this.commentLayout.length
         });
     }
@@ -404,7 +400,6 @@ export class Danmaku {
         } else {
             this.allComments.splice(insertIndex, 0, comment);
         }
-        this.commentsCount++;
         this.calculateLayouts();
         this.resyncCommentQueue();
     }
@@ -455,7 +450,6 @@ export class Danmaku {
         this.allComments = [];
         this.commentLayout = [];
         this.nextEmitIndex = 0;
-        this.commentsCount = 0;
         this.container.innerHTML = '';
     }
 
