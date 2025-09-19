@@ -36,8 +36,17 @@ export class Danmaku {
     private isResyncing = false;
     // private needsResync = false;
     private lastTimestamp: number = 0;
-    private animationFrameId: number | null = null;
-    private videoEventListeners: VideoEventListener[] = [];
+    // private animationFrameId: number | null = null;
+    private videoEventListeners: VideoEventListener[] = [
+            { event: "timeupdate", listener: () => this.emitNewComments() },
+            { event: "play", listener: () => this.play() },
+            { event: "playing", listener: () => this.play() },
+            { event: "pause", listener: () => this.pause() },
+            { event: "waiting", listener: () => this.pause() },
+            { event: "stalled", listener: () => this.pause() },
+            { event: "seeking", listener: () => this.pause() },
+            { event: "seeked", listener: () => this.debouncedResync() },
+        ];
     private reportModal: ReportModal;
     private isVisible: boolean = true;
     
@@ -287,7 +296,6 @@ export class Danmaku {
         });
 
         this.lastTimestamp = 0;
-        this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
     }
 
     public pause(): void {
@@ -299,10 +307,10 @@ export class Danmaku {
             (el as HTMLElement).style.animationPlayState = 'paused';
         });
 
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
+        // if (this.animationFrameId) {
+        //     cancelAnimationFrame(this.animationFrameId);
+        //     this.animationFrameId = null;
+        // }
     }
 
     public resyncCommentQueue(): void {
@@ -313,7 +321,7 @@ export class Danmaku {
         this.container.querySelectorAll('.danmaku-comment').forEach(el => this.returnElementToPool(el as HTMLElement));
         console.log('[Danmaku] resyncCommentQueue: Cleared all visible comments from DOM.');
 
-        this.nextEmitIndex = this.findFirstLayoutAfter(currentTime);
+        this.nextEmitIndex = this.findNextCommentIndex(currentTime);
         console.log(`[Danmaku] resyncCommentQueue: Next comment to be emitted is at index ${this.nextEmitIndex}.`);
 
         let reEmittedCount = 0;
@@ -341,7 +349,7 @@ export class Danmaku {
         }, 50); // 50ms debounce time
     }
 
-    private findFirstLayoutAfter(time: number): number {
+    private findNextCommentIndex(time: number): number {
         // Binary search to find the first comment that should appear after the current time
         let low = 0;
         let high = this.commentLayout.length;
@@ -416,7 +424,7 @@ export class Danmaku {
         this.videoEventListeners.forEach(({ event, listener }) => {
             this.videoPlayer.removeEventListener(event, listener);
         });
-        this.videoEventListeners = [];
+        // this.videoEventListeners = [];
 
         this.videoPlayer = videoPlayer;
         this.resize();
@@ -432,7 +440,7 @@ export class Danmaku {
         this.videoEventListeners.forEach(({ event, listener }) => {
             this.videoPlayer.removeEventListener(event, listener);
         });
-        this.videoEventListeners = [];
+        // this.videoEventListeners = [];
 
         this.container.removeEventListener('mouseover', this.handleContainerMouseOver, { passive: true } as any);
         this.container.removeEventListener('mouseout', this.handleContainerMouseOut, { passive: true } as any);
@@ -453,23 +461,27 @@ export class Danmaku {
         this.container.innerHTML = '';
     }
 
-    private animationLoop(timestamp: number): void {
-        if (!this.isRunning) return;
-        this.emitNewComments();
-        this.animationFrameId = requestAnimationFrame((t) => this.animationLoop(t));
-    }
-
     private emitNewComments(): void {
         if (!this.videoPlayer) return;
         const currentTime = this.videoPlayer.currentTime * 1000;
-        while (this.nextEmitIndex < this.commentLayout.length && this.commentLayout[this.nextEmitIndex].startTime <= currentTime) {
-            const layout = this.commentLayout[this.nextEmitIndex];
+        const currentIndex = this.findNextCommentIndex(currentTime);
+
+        for (let i = this.nextEmitIndex; i < currentIndex; i++) {
+            const layout = this.commentLayout[i];
             const comment = this.allComments.find(c => c.id === layout.commentId);
             if (comment) {
                 this.emitComment(comment, layout);
             }
-            this.nextEmitIndex++;
         }
+        this.nextEmitIndex = currentIndex;
+        // while (this.nextEmitIndex < this.commentLayout.length && this.commentLayout[this.nextEmitIndex].startTime <= currentTime) {
+        //     const layout = this.commentLayout[this.nextEmitIndex];
+        //     const comment = this.allComments.find(c => c.id === layout.commentId);
+        //     if (comment) {
+        //         this.emitComment(comment, layout);
+        //     }
+        //     this.nextEmitIndex++;
+        // }
     }
 
     private emitComment(comment: Comment, layout: DanmakuLayoutInfo): void {
@@ -675,20 +687,11 @@ export class Danmaku {
     // --- Event Listeners and Observers Setup ---
 
     private addVideoEventListeners(): void {
-        const listeners: VideoEventListener[] = [
-            { event: "play", listener: () => this.play() },
-            { event: "playing", listener: () => this.play() },
-            { event: "pause", listener: () => this.pause() },
-            { event: "waiting", listener: () => this.pause() },
-            { event: "stalled", listener: () => this.pause() },
-            { event: "seeking", listener: () => this.pause() },
-            { event: "seeked", listener: () => this.debouncedResync() },
-        ];
-        listeners.forEach(({ event, listener }) => {
+        this.videoEventListeners.forEach(({ event, listener }) => {
             this.videoPlayer.addEventListener(event, listener);
             this.videoEventListeners.push({ event, listener });
         });
-        console.log(`[Danmaku] addVideoEventListeners: Added ${listeners.length} listeners to the video player.`);
+        console.log(`[Danmaku] addVideoEventListeners: Added ${this.videoEventListeners.length} listeners to the video player.`);
     }
 
     private setupResizeObserver(): void {
