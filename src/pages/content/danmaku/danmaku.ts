@@ -25,6 +25,11 @@ export class Danmaku {
 
     // --- Constants ---
     private readonly DURATION = 7000; // milliseconds
+    private durationMap: Map<ScrollMode, number> = new Map([
+        [ScrollMode.SLIDE, this.DURATION],
+        [ScrollMode.TOP, this.DURATION / 2],
+        [ScrollMode.BOTTOM, this.DURATION / 2]
+    ])!;
     private laneHeight: number; // pixels
     private fontSize: number; // pixels
 
@@ -58,7 +63,7 @@ export class Danmaku {
 
         this.fontSize = 24;
         this.laneHeight = 30;
-        console.log(`[Danmaku] Set fontSize: ${this.fontSize}, laneHeight: ${this.laneHeight}`);
+        console.debug(`[Danmaku] Set fontSize: ${this.fontSize}, laneHeight: ${this.laneHeight}`);
         this.reportModal = new ReportModal();
 
         const tempCanvas = document.createElement('canvas');
@@ -67,22 +72,22 @@ export class Danmaku {
         this.tempCanvasContext = tempCanvas.getContext('2d') || {
             measureText: (text: string) => ({ width: text.length * 12 * this.fontSizeMultiplier })
         } as CanvasRenderingContext2D;
-        console.log('[Danmaku] Created temporary canvas for text measurement');
+        console.debug('[Danmaku] Created temporary canvas for text measurement');
 
-        console.log(videoPlayer);
-        console.log(container);
+        console.debug(videoPlayer);
+        console.debug(container);
         if (videoPlayer && container) {
             this.lastKnownWidth = container.offsetWidth;
             this.lastKnownHeight = container.offsetHeight;
-            console.log(`[Danmaku] Set lastKnownWidth: ${this.lastKnownWidth}, lastKnownHeight: ${this.lastKnownHeight}`);
+            console.debug(`[Danmaku] Set lastKnownWidth: ${this.lastKnownWidth}, lastKnownHeight: ${this.lastKnownHeight}`);
             this.initializeLanes();
             this.addVideoEventListeners();
             this.setupResizeObserver();
             this.setupWindowResizeListener();
             this.initializePopup();
-            console.log('[Danmaku] Initialization complete with videoPlayer and container');
+            console.debug('[Danmaku] Initialization complete with videoPlayer and container');
         } else {
-            console.log('[Danmaku] Initialization skipped: videoPlayer or container not provided');
+            console.debug('[Danmaku] Initialization skipped: videoPlayer or container not provided');
         }
         console.debug('[Danmaku] Constructor finished');
     }
@@ -91,12 +96,13 @@ export class Danmaku {
         this.laneCount = this.calculateLaneCount();
         this.slidingLanes = new Array(this.laneCount).fill(-1);
         this.topBottomLanes = new Array(this.laneCount).fill(-1);
-        console.log(`[Danmaku] Initialized ${this.laneCount} lanes`);
+        console.debug(`[Danmaku] Initialized ${this.laneCount} lanes`);
     }
 
     public setComments(comments: Comment[]): void {
         console.debug('[Danmaku] setComments called', { comments });
         this.allComments = comments.sort((a, b) => a.time - b.time);
+        console.debug(this.allComments);
         this.resyncCommentQueue();
         console.debug('[Danmaku] setComments finished', { allComments: this.allComments });
     }
@@ -111,19 +117,19 @@ export class Danmaku {
         const screenHeight = this.lastKnownHeight || this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
         const controlsHeight = this.controls.offsetHeight || 0;
         const laneCount = Math.max(1, Math.floor((screenHeight - controlsHeight) / this.laneHeight));
-        console.log(`[Danmaku] Calculated lane count: ${laneCount} (screenHeight: ${screenHeight}, controlsHeight: ${controlsHeight}, laneHeight: ${this.laneHeight})`);
+        console.debug(`[Danmaku] Calculated lane count: ${laneCount} (screenHeight: ${screenHeight}, controlsHeight: ${controlsHeight}, laneHeight: ${this.laneHeight})`);
         console.debug('[Danmaku] calculateLaneCount result', { laneCount });
         return laneCount;
     }
 
-    private getDuration(scrollMode: ScrollMode): number {
-        console.debug('[Danmaku] getDuration called', { scrollMode });
-        if (scrollMode === ScrollMode.SLIDE) {
-            return this.DURATION / this.speedMultiplier;
-        } else {
-            return (this.DURATION / this.speedMultiplier) / 2;
-        }
-    }
+    // private getDuration(scrollMode: ScrollMode): number {
+    //     console.debug('[Danmaku] getDuration called', { scrollMode });
+    //     if (scrollMode === ScrollMode.SLIDE) {
+    //         return this.DURATION / this.speedMultiplier;
+    //     } else {
+    //         return (this.DURATION / this.speedMultiplier) / 2;
+    //     }
+    // }
 
     public play(): void {
         console.debug('[Danmaku] play called', { isRunning: this.isRunning, isVisible: this.isVisible });
@@ -149,12 +155,12 @@ export class Danmaku {
     public resyncCommentQueue(): void {
         console.debug('[Danmaku] resyncCommentQueue called');
         if (this.getCommentsCount === 0) {
-            console.log('[Danmaku] No comments to resync');
+            console.debug('[Danmaku] No comments to resync');
             return;
         }
 
         const currentTime = this.videoPlayer.currentTime * 1000;
-        console.log(`[Danmaku] Current time: ${currentTime}ms`);
+        console.debug(`[Danmaku] Current time: ${currentTime}ms`);
 
         // Clear all existing comments
         this.container.querySelectorAll('.danmaku-comment').forEach(el =>
@@ -166,19 +172,19 @@ export class Danmaku {
         this.topBottomLanes.fill(-1);
 
         this.nextEmitIndex = this.findNextCommentIndex(currentTime);
-        console.log(`[Danmaku] Next emit index set to: ${this.nextEmitIndex}`);
+        console.debug(`[Danmaku] Next emit index set to: ${this.nextEmitIndex}`);
         let reEmittedCount = 0;
 
         for (let i = 0; i < this.nextEmitIndex; i++) {
             const comment = this.allComments[i];
-            const duration = this.getDuration(comment.scrollMode);
-            if (comment.time + duration > currentTime) {
-                console.log(`[Danmaku] Re-emitting comment ID ${comment.id} at time ${comment.time}ms`);
+            // const duration = this.getDuration(comment.scrollMode);
+            if (comment.time + this.durationMap.get(comment.scrollMode)! > currentTime) {
+                console.debug(`[Danmaku] Re-emitting comment ID ${comment.id} at time ${comment.time}ms`);
                 this.emitComment(comment, true);
                 reEmittedCount++;
             }
         }
-        console.log(`[Danmaku] Resync complete. Re-emitted ${reEmittedCount} comments`);
+        console.debug(`[Danmaku] Resync complete. Re-emitted ${reEmittedCount} comments`);
         console.debug('[Danmaku] resyncCommentQueue finished');
     }
 
@@ -200,24 +206,24 @@ export class Danmaku {
 
     // Modify resize method to properly handle lane management
     public resize(): void {
-    console.log('[Danmaku] resize: Detected resize.');
-    const newLaneCount = this.calculateLaneCount();
+        console.debug('[Danmaku] resize: Detected resize.');
+        const newLaneCount = this.calculateLaneCount();
 
-    // Update lane tracking arrays to the new size without losing data
-    if (newLaneCount > this.laneCount) {
-        // Add new available lanes (initialized to -1, meaning free)
-        this.slidingLanes.push(...new Array(newLaneCount - this.laneCount).fill(-1));
-        this.topBottomLanes.push(...new Array(newLaneCount - this.laneCount).fill(-1));
-    } else if (newLaneCount < this.laneCount) {
-        // Trim excess lanes
-        this.slidingLanes.length = newLaneCount;
-        this.topBottomLanes.length = newLaneCount;
+        // Update lane tracking arrays to the new size without losing data
+        if (newLaneCount > this.laneCount) {
+            // Add new available lanes (initialized to -1, meaning free)
+            this.slidingLanes.push(...new Array(newLaneCount - this.laneCount).fill(-1));
+            this.topBottomLanes.push(...new Array(newLaneCount - this.laneCount).fill(-1));
+        } else if (newLaneCount < this.laneCount) {
+            // Trim excess lanes
+            this.slidingLanes.length = newLaneCount;
+            this.topBottomLanes.length = newLaneCount;
+        }
+
+        this.laneCount = newLaneCount;
+        // Reposition existing comments instead of a full, costly resync
+        this.updateVisibleDanmakuPositions();
     }
-
-    this.laneCount = newLaneCount;
-    // Reposition existing comments instead of a full, costly resync
-    this.updateVisibleDanmakuPositions();
-}
 
 
     /**
@@ -225,36 +231,37 @@ export class Danmaku {
          * and hides any that are now in out-of-bounds lanes.
          */
     private updateVisibleDanmakuPositions(): void {
-    this.container.querySelectorAll('.danmaku-comment').forEach(el => {
-        const element = el as HTMLElement;
-        const lane = parseInt(element.dataset.lane || '-1', 10);
+        this.container.querySelectorAll('.danmaku-comment').forEach(el => {
+            const element = el as HTMLElement;
+            const lane = parseInt(element.dataset.lane || '-1', 10);
 
-        if (lane === -1) return;
+            if (lane === -1) return;
 
-        if (lane >= this.laneCount) {
-            // This lane no longer exists, hide the comment.
-            // It will be removed from the DOM on animationend.
-            element.style.display = 'none';
-        } else {
-            // Reposition the comment based on the potentially new laneHeight.
-            element.style.top = `${lane * this.laneHeight}px`;
-        }
-    });
-}
+            if (lane >= this.laneCount) {
+                // This lane no longer exists, hide the comment.
+                // It will be removed from the DOM on animationend.
+                element.style.display = 'none';
+            } else {
+                // Reposition the comment based on the potentially new laneHeight.
+                element.style.top = `${lane * this.laneHeight}px`;
+            }
+        });
+    }
 
     private findAvailableSlidingLane(time: number): number {
         console.debug('[Danmaku] findAvailableSlidingLane called', { time });
-        const duration = this.getDuration(ScrollMode.SLIDE);
-        const delay = DensityConfig[this.densityMode].delay;
 
+        console.debug(`[Danmaku] Finding sliding lane at time ${time}ms`);
+        console.debug(this.laneCount);
         // Ensure lane arrays match current laneCount
         while (this.slidingLanes.length < this.laneCount) {
             this.slidingLanes.push(-1);
         }
 
+        console.debug(`[Danmaku] Sliding lanes state:`, this.slidingLanes);
         for (let i = 0; i < this.laneCount; i++) {
-            if (time === -1 || time >= this.slidingLanes[i] + delay) {
-                this.slidingLanes[i] = time + duration;
+            if (this.slidingLanes[i] === -1 || time >= this.slidingLanes[i]) {
+                this.slidingLanes[i] = time + this.durationMap.get(ScrollMode.SLIDE)!; // Reserve the lane
                 console.debug('[Danmaku] findAvailableSlidingLane result', { lane: i });
                 return i;
             }
@@ -264,17 +271,15 @@ export class Danmaku {
 
     private findAvailableTopLane(time: number): number {
         console.debug('[Danmaku] findAvailableTopLane called', { time });
-        const duration = this.getDuration(ScrollMode.TOP);
-        const delay = DensityConfig[this.densityMode].delay;
 
         // Ensure lane arrays match current laneCount
         while (this.topBottomLanes.length < this.laneCount) {
             this.topBottomLanes.push(-1);
         }
-
+        console.debug(`[Danmaku] Top/Bottom lanes state:`, this.topBottomLanes);
         for (let i = 0; i < this.laneCount; i++) {
-            if (time === -1 || time >= this.topBottomLanes[i] + delay) {
-                this.topBottomLanes[i] = time + duration;
+            if (this.topBottomLanes[i] === -1 || time >= this.topBottomLanes[i]) {
+                this.topBottomLanes[i] = time + this.durationMap.get(ScrollMode.TOP)!; // Reserve the lane
                 console.debug('[Danmaku] findAvailableTopLane result', { lane: i });
                 return i;
             }
@@ -284,17 +289,16 @@ export class Danmaku {
 
     private findAvailableBottomLane(time: number): number {
         console.debug('[Danmaku] findAvailableBottomLane called', { time });
-        const duration = this.getDuration(ScrollMode.BOTTOM);
-        const delay = DensityConfig[this.densityMode].delay;
 
         // Ensure lane arrays match current laneCount
         while (this.topBottomLanes.length < this.laneCount) {
             this.topBottomLanes.push(-1);
         }
 
+        console.debug(`[Danmaku] Top/Bottom lanes state:`, this.topBottomLanes);
         for (let i = this.laneCount - 1; i >= 0; i--) {
-            if (time === -1 || time >= this.topBottomLanes[i] + delay) {
-                this.topBottomLanes[i] = time + duration;
+            if (this.topBottomLanes[i] === -1 || time >= this.topBottomLanes[i]) {
+                this.topBottomLanes[i] = time + this.durationMap.get(ScrollMode.BOTTOM)!; // Reserve the lane
                 console.debug('[Danmaku] findAvailableBottomLane result', { lane: i });
                 return i;
             }
@@ -396,7 +400,7 @@ export class Danmaku {
     private emitNewComments(): void {
         console.debug('[Danmaku] emitNewComments called', { currentTime: this.videoPlayer.currentTime });
         if (!this.videoPlayer || !this.isRunning) return;
-        console.log('[Danmaku] Emitting new comments');
+        console.debug('[Danmaku] Emitting new comments');
         const currentTime = this.videoPlayer.currentTime * 1000;
 
         let emittedCount = 0;
@@ -407,12 +411,12 @@ export class Danmaku {
                 emittedCount++;
                 this.nextEmitIndex++;
             } else {
-                console.log(`[Danmaku] Failed to emit comment ID ${comment.id} at time ${comment.time}ms`);
+                console.debug(`[Danmaku] Failed to emit comment ID ${comment.id} at time ${comment.time}ms`);
                 break;
             }
         }
         if (emittedCount > 0) {
-            console.log(`[Danmaku] Emitted ${emittedCount} new comments at time ${currentTime}ms`);
+            console.debug(`[Danmaku] Emitted ${emittedCount} new comments at time ${currentTime}ms`);
         }
         console.debug('[Danmaku] emitNewComments finished');
     }
@@ -422,22 +426,27 @@ export class Danmaku {
         const currentTime = this.videoPlayer.currentTime * 1000;
 
         if (comment.scrollMode === ScrollMode.SLIDE) {
-            lane = this.findAvailableSlidingLane(comment.time);
+            lane = this.findAvailableSlidingLane(currentTime);
         } else if (comment.scrollMode === ScrollMode.TOP) {
-            lane = this.findAvailableTopLane(comment.time);
+            lane = this.findAvailableTopLane(currentTime);
         } else if (comment.scrollMode === ScrollMode.BOTTOM) {
-            lane = this.findAvailableBottomLane(comment.time);
+            lane = this.findAvailableBottomLane(currentTime);
         }
 
+        console.debug(`[Danmaku] Attempting to emit comment ID ${comment.id} at time ${comment.time}ms in scrollMode ${comment.scrollMode}`);
         if (lane === -1) return false;
+
+        console.debug(`[Danmaku] Emitting comment ID ${comment.id} in lane ${lane} (scrollMode: ${comment.scrollMode})`);
 
         try {
             const danmakuElement = this.getElementFromPool(comment);
-            danmakuElement.dataset.lane = lane.toString(); // Store the lane on the element
-            const duration = this.getDuration(comment.scrollMode);
+            console.debug(`[Danmaku] Created danmaku element for comment ID ${comment.id}`);
+            danmakuElement.dataset.lane = lane.toString();
+            const duration = this.durationMap.get(comment.scrollMode)!;
             const timeSinceStart = isResync ? currentTime - comment.time : 0;
 
             this.setInitialPosition(danmakuElement, timeSinceStart, duration, lane, comment.scrollMode, isResync);
+            console.debug(`[Danmaku] Set initial position for comment ID ${comment.id} at timeSinceStart: ${timeSinceStart}ms`);
             danmakuElement.classList.add(`danmaku-animation-${comment.scrollMode}`);
             danmakuElement.style.animationPlayState = this.isRunning ? 'running' : 'paused';
 
@@ -486,14 +495,24 @@ export class Danmaku {
         console.debug('[Danmaku] setInitialPosition called', { element, timeSinceStart, duration, lane, scrollMode, isResync });
         element.style.setProperty('--danmaku-duration', `${duration / 1000}s`);
 
-        if (isResync && scrollMode === ScrollMode.SLIDE && timeSinceStart > 0) {
-            const progress = timeSinceStart / this.getDuration(scrollMode);
-            const textWidth = this.tempCanvasContext.measureText(element.textContent || '').width;
-            const totalDistance = this.lastKnownWidth + textWidth;
-            const currentPos = totalDistance * (1 - progress) - textWidth;
-            element.style.left = `${currentPos}px`;
-            element.style.position = 'absolute';
-            element.classList.remove(`danmaku-animation-${scrollMode}`);
+        // lane free time
+        const textWidth = this.tempCanvasContext.measureText(element.textContent || '').width;
+        if (scrollMode === ScrollMode.SLIDE) {
+            const timeForTailtoClear = (textWidth / (this.lastKnownWidth + textWidth)) * duration;
+            this.slidingLanes[lane] = this.videoPlayer.currentTime * 1000 + timeForTailtoClear + DensityConfig[this.densityMode].delay;
+        } else {
+            // free time should be currentTime + duration
+            this.topBottomLanes[lane] = this.videoPlayer.currentTime * 1000 + duration
+        }
+
+        if (isResync && scrollMode === ScrollMode.SLIDE && timeSinceStart >= 0) {
+            const progress = timeSinceStart / duration;
+            element.style.animationDelay = `-${progress * duration / 1000}s`;
+            element.classList.add(`danmaku-animation-${scrollMode}`);
+        } else if (isResync && (scrollMode === ScrollMode.TOP || scrollMode === ScrollMode.BOTTOM) && timeSinceStart >= 0) {
+            // place the element in a free lane, and set animation to end after its remaining time relative to the current time of videoplayer
+            this.topBottomLanes[lane] = this.videoPlayer.currentTime * 1000 + (this.durationMap.get(scrollMode)! - timeSinceStart);
+            element.style.animationDuration = `${(this.durationMap.get(scrollMode)! - timeSinceStart) / 1000}s`;
         }
 
         // Ensure lane position is within bounds
@@ -501,6 +520,7 @@ export class Danmaku {
         element.style.top = `${clampedLane * this.laneHeight}px`;
         console.debug('[Danmaku] setInitialPosition finished');
     }
+
 
     private returnElementToPool(element: HTMLElement): void {
         console.debug('[Danmaku] returnElementToPool called', { element });
@@ -544,7 +564,7 @@ export class Danmaku {
 
         this.container.addEventListener('mouseover', this.handleContainerMouseOver);
         this.container.addEventListener('mouseout', this.handleContainerMouseOut);
-        window.addEventListener('mousemove', this.handleMouseMove);
+        this.popupElement.addEventListener('mousemove', this.handleMouseMove);
         console.debug('[Danmaku] initializePopup finished');
     }
 
@@ -728,11 +748,11 @@ export class Danmaku {
     }
 
     public setFontSize(percent: number): void {
-    this.fontSizeMultiplier = Math.max(0.1, percent / 100);
-    this.laneHeight = Math.max(20, Math.floor(this.fontSize * this.fontSizeMultiplier * 1.25));
-    console.log(`[Danmaku] setFontSize: Font size multiplier set to ${this.fontSizeMultiplier}, new lane height is ${this.laneHeight}px.`);
-    
-    // Call the efficient resize method instead of a full resync
-    this.resize();
-}
+        this.fontSizeMultiplier = Math.max(0.1, percent / 100);
+        this.laneHeight = Math.max(20, Math.floor(this.fontSize * this.fontSizeMultiplier * 1.25));
+        console.debug(`[Danmaku] setFontSize: Font size multiplier set to ${this.fontSizeMultiplier}, new lane height is ${this.laneHeight}px.`);
+
+        // Call the efficient resize method instead of a full resync
+        this.resize();
+    }
 }
