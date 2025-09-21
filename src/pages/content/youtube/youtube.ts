@@ -2,6 +2,7 @@ import { DanmakuInput } from "../danmaku/danmakuInput";
 import { getDisplayPlan } from "../api"; // UPDATED
 import { Danmaku } from "../danmaku/danmaku";
 import { LoginModal } from "../modal-login/modal-login";
+import { DisplayPlan, PlannedComment } from "../interfaces/danmaku";
 import youtubeCss from "../css/sites/youtube.css?raw";
 import danmakuCss from "../css/danmaku.css?raw";
 import danmakuInputCss from "../css/danmaku-input.css?raw";
@@ -135,21 +136,20 @@ export class YouTubeAdapter implements SiteAdapter {
             }
 
             console.log("Video metadata loaded. Loading display plan.");
-            const plannedComments: PlannedComment[] | null = await getDisplayPlan("youtube", this.videoId);
+            const displayPlan: DisplayPlan | null = await getDisplayPlan("youtube", this.videoId!);
 
-            if (displayPlan && displayPlan.comments) {
+            if (displayPlan && displayPlan.comments.length > 0) {
                  console.log("Received display plan with comments:", displayPlan.comments.length);
-                this.danmaku.setComments(displayPlan.comments);
+                this.danmaku!.setComments(displayPlan.comments);
                 this.danmakuInputInstance!.updateCommentsCount(displayPlan.comments.length);
             } else {
                  console.log("No display plan received or plan was empty.");
-                 this.danmaku.setComments([]); // Set empty array to clear any old comments
+                 this.danmaku!.setComments([]);
                  this.danmakuInputInstance!.updateCommentsCount(0);
             }
 
-
-            if (!this.danmaku.videoPlayer.paused) {
-                this.danmaku.play();
+            if (!this.danmaku!.videoPlayer.paused) {
+                this.danmaku!.play();
             }
         });
     };

@@ -1,13 +1,24 @@
 import { ScrollMode, FontSize } from "./enum";
 
 /**
+ * Represents a raw comment structure from API response, as it would be stored in database.
+ * Contains fields from the API JSON.
+ */
+export interface ApiRawComment extends RawComment {
+    user_id: number; // Alias for userId
+    video_id: number;
+    created_at: string;
+    like_score: string; // Note: string in JSON, convert to number if needed
+}
+
+/**
  * Represents a raw comment structure, as it would be stored in your database.
  * The backend will use this, along with other data like 'likes', to generate the plan.
  */
 export interface RawComment {
     id: number;
     content: string;
-    time: number; // The original timestamp in ms
+    time: number; // The original timestamp in seconds from API, convert to ms
     color: string;
     userId: number;
     scrollMode: ScrollMode;

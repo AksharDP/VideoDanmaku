@@ -253,7 +253,7 @@ export class Danmaku {
     
     private recalculateLocalLanes(): void {
         const screenHeight = this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
-        this.localLaneCount = Math.max(1, Math.floor(screenHeight / this.laneHeight));
+        this.localLaneCount = Math.max(1, Math.floor(screenHeight / this.laneHeight)) - 1;
         this.localSlidingLanes = new Array(this.localLaneCount).fill(0);
         this.localTopBottomLanes = new Array(this.localLaneCount).fill(0);
     }

@@ -1,6 +1,6 @@
 import packageJson from "../../../package.json";
 import { FontSize, ScrollMode } from "./interfaces/enum";
-import { PlannedComment } from "./interfaces/danmaku";
+import { ApiRawComment, RawComment, PlannedComment, DisplayPlan } from "./interfaces/danmaku";
 
 const API_BASE_URL = packageJson.API_BASE_URL;
 
@@ -66,13 +66,102 @@ export interface PostCommentResponse {
 }
 
 /**
- * [REPLACED] Fetches the pre-calculated display plan for a given video.
- * This replaces the old `getComments` function on the client-side.
+ * Maps API raw comment to internal RawComment.
  */
-export async function getDisplayPlan(platform: string, videoId: string): Promise<Comment[] | null> {
+function mapApiToRaw(apiComment: any): RawComment {
+    return {
+        id: apiComment.id,
+        content: apiComment.content,
+        time: apiComment.time, // ms as per JSON
+        color: apiComment.color,
+        userId: parseInt(apiComment.user_id),
+        scrollMode: apiComment.scroll_mode as ScrollMode,
+        fontSize: apiComment.font_size as FontSize,
+        likes: parseInt(apiComment.like_score || '0'),
+    };
+}
+
+/**
+ * Plans raw comments into planned comments with lanes, durations, widths.
+ * Simple sequential lane assignment with overlap allowance.
+ */
+function planRawComments(rawComments: RawComment[]): PlannedComment[] {
+    const containerWidth = Math.min(window.innerWidth * 0.9, 1920); // Approx video width
+    const laneHeight = 30;
+    const laneCount = Math.max(5, Math.floor((window.innerHeight || 720) / laneHeight));
+    const slidingLanes: number[] = new Array(laneCount).fill(0);
+    const topBottomLanes: number[] = new Array(laneCount).fill(0);
+
+    // Temp canvas for text width
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000;
+    canvas.height = 40;
+    const context = canvas.getContext('2d')!;
+    const fontSizeMap: Record<FontSize, number> = {
+        [FontSize.SMALL]: 18,
+        [FontSize.NORMAL]: 24,
+        [FontSize.LARGE]: 32,
+    };
+
+    const planned: PlannedComment[] = [];
+
+    const sorted = [...rawComments].sort((a, b) => a.time - b.time);
+
+    for (const raw of sorted) {
+        const fontSizePx = fontSizeMap[raw.fontSize] || 24;
+        context.font = `${fontSizePx}px Roboto`;
+        const textWidth = context.measureText(raw.content).width;
+
+        let lanes: number[];
+        let duration: number;
+        let reservationTime: number;
+
+        const emissionTime = raw.time;
+
+        if (raw.scrollMode === ScrollMode.SLIDE) {
+            lanes = slidingLanes;
+            duration = 8000; // ms
+            reservationTime = textWidth > 0 ? (textWidth / containerWidth) * duration : duration;
+        } else {
+            lanes = topBottomLanes;
+            duration = 5000; // ms for top/bottom
+            reservationTime = duration / 2; // shorter reservation since static
+        }
+
+        // Find available lane (earliest possible)
+        let lane = -1;
+        for (let i = 0; i < lanes.length; i++) {
+            if (lanes[i] <= emissionTime) {
+                lane = i;
+                lanes[i] = emissionTime + reservationTime;
+                break;
+            }
+        }
+
+        // If busy, use lane with earliest end (allow overlap)
+        if (lane === -1) {
+            const minIndex = lanes.indexOf(Math.min(...lanes));
+            lane = minIndex;
+            lanes[lane] = Math.max(emissionTime, lanes[lane]) + reservationTime;
+        }
+
+        planned.push({
+            ...raw,
+            lane,
+            duration,
+            width: textWidth,
+        });
+    }
+
+    return planned;
+}
+
+/**
+ * Fetches raw comments from getComments API and plans them client-side into a DisplayPlan.
+ */
+export async function getDisplayPlan(platform: string, videoId: string): Promise<DisplayPlan | null> {
     try {
         console.log("getDisplayPlan called with:", { platform, videoId });
-        // The endpoint now points to a new backend service that returns the optimized plan
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}`;
         console.log("Fetching from URL:", url);
         const response = await fetch(url);
@@ -80,31 +169,21 @@ export async function getDisplayPlan(platform: string, videoId: string): Promise
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
+        const data: { success: boolean; comments: any[]; source?: string; } = await response.json();
         console.log("Response data:", data);
 
-        // Basic validation of the received comments
-        if (data.success && Array.isArray(data.comments)) {
-            console.log("Returning display plan with comments:", data.comments.length);
-            // convert Array to PlannedComment[]
-            return { comments: data.comments.map(comment => ({
-                id: comment.id,
-                content: comment.content,
-                time: comment.time,
-                color: comment.color,
-                userId: comment.userId,
-                scrollMode: comment.scrollMode,
-                fontSize: comment.fontSize,
-                lane: 0, // Default lane
-                duration: 0, // Default duration
-                width: 0, // Default width
-            })) };
+        if (data.success && Array.isArray(data.comments) && data.comments.length > 0) {
+            const rawComments: RawComment[] = data.comments.map(mapApiToRaw);
+            console.log("Mapped raw comments:", rawComments.length);
+            const plannedComments = planRawComments(rawComments);
+            console.log("Planned comments:", plannedComments.length);
+            return { comments: plannedComments };
         }
-        console.log("No display plan found or invalid response format");
-        return null;
+        console.log("No comments or invalid format, returning empty plan");
+        return { comments: [] };
     } catch (error) {
-        console.error("Failed to fetch display plan:", error);
-        return null;
+        console.error("Failed to fetch and plan display:", error);
+        return { comments: [] };
     }
 }
 
