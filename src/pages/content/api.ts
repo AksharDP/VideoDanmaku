@@ -1,5 +1,6 @@
 import packageJson from "../../../package.json";
 import { FontSize, ScrollMode } from "./interfaces/enum";
+import { PlannedComment } from "./interfaces/danmaku";
 
 const API_BASE_URL = packageJson.API_BASE_URL;
 
@@ -20,6 +21,7 @@ export interface Comment {
     userId: number;
     scrollMode: ScrollMode;
     fontSize: FontSize;
+    likes?: number; // Added for backend prioritization
 }
 
 
@@ -63,29 +65,49 @@ export interface PostCommentResponse {
     status?: number;
 }
 
-export async function getComments(platform: string, videoId: string, commentLimit: number): Promise<Comment[]> {
+/**
+ * [REPLACED] Fetches the pre-calculated display plan for a given video.
+ * This replaces the old `getComments` function on the client-side.
+ */
+export async function getDisplayPlan(platform: string, videoId: string): Promise<Comment[] | null> {
     try {
-        console.log("getComments called with:", { platform, videoId, commentLimit });
-        const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${commentLimit}`;
+        console.log("getDisplayPlan called with:", { platform, videoId });
+        // The endpoint now points to a new backend service that returns the optimized plan
+        const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}`;
         console.log("Fetching from URL:", url);
         const response = await fetch(url);
         console.log("Response status:", response.status, "ok:", response.ok);
         if (!response.ok) {
-            new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         console.log("Response data:", data);
+
+        // Basic validation of the received comments
         if (data.success && Array.isArray(data.comments)) {
-            console.log("Returning comments:", data.comments.length);
-            return data.comments;
+            console.log("Returning display plan with comments:", data.comments.length);
+            // convert Array to PlannedComment[]
+            return { comments: data.comments.map(comment => ({
+                id: comment.id,
+                content: comment.content,
+                time: comment.time,
+                color: comment.color,
+                userId: comment.userId,
+                scrollMode: comment.scrollMode,
+                fontSize: comment.fontSize,
+                lane: 0, // Default lane
+                duration: 0, // Default duration
+                width: 0, // Default width
+            })) };
         }
-        console.log("No comments found or invalid response format");
-        return [];
+        console.log("No display plan found or invalid response format");
+        return null;
     } catch (error) {
-        console.error("Failed to fetch comments:", error);
-        return [];
+        console.error("Failed to fetch display plan:", error);
+        return null;
     }
 }
+
 
 export async function postComment(
     platform: string,
@@ -245,7 +267,7 @@ export async function reportComment(
                 console.error("Authentication failed. Please login again.");
                 chrome.storage.local.remove("authToken");
             }
-            new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();

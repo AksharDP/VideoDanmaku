@@ -1,5 +1,5 @@
 import { DanmakuInput } from "../danmaku/danmakuInput";
-import { getComments } from "../api";
+import { getDisplayPlan } from "../api"; // UPDATED
 import { Danmaku } from "../danmaku/danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import youtubeCss from "../css/sites/youtube.css?raw";
@@ -11,7 +11,7 @@ export class YouTubeAdapter implements SiteAdapter {
     public isInitialized: boolean = false;
     private videoId: string | null = null;
     private danmaku: Danmaku | null = null;
-    private videoContainer: HTMLDivElement | null = null;
+    private videoContainer: HTMLElement | null = null;
     private videoPlayer: HTMLVideoElement | null = null;
     private controls: HTMLElement | null = null;
     private loginModal: LoginModal = new LoginModal();
@@ -69,15 +69,10 @@ export class YouTubeAdapter implements SiteAdapter {
                 console.log("First-time initialization.");
                 this.danmakuContainer = document.createElement("div");
                 this.danmakuContainer.classList.add("danmaku-container");
-                this.danmakuContainer.style.height = `${this.videoPlayer.height}px`;
-                this.videoPlayer.parentElement?.insertBefore(
-                    this.danmakuContainer,
-                    this.videoPlayer.nextSibling
-                );
-
+                // The container should be a sibling of the video player, not a child
+                this.videoContainer.appendChild(this.danmakuContainer);
+                
                 this.danmaku = new Danmaku(
-                    
-                    // this.videoContainer,
                     this.videoPlayer,
                     this.danmakuContainer,
                     this.controls
@@ -96,18 +91,12 @@ export class YouTubeAdapter implements SiteAdapter {
                 console.log("Danmaku system initialized for the first time.");
             } else {
                 console.log("Re-initializing for new video.");
-                this.danmaku!.reinitialize(this.videoPlayer);
+                // The danmaku instance now just needs a full clear
+                this.danmaku!.destroy(); 
+                this.danmaku = new Danmaku(this.videoPlayer, this.danmakuContainer!, this.controls);
+                
                 this.danmakuInputInstance!.updateVideoId(this.videoId);
 
-                if (
-                    this.danmakuContainer &&
-                    !this.danmakuContainer.parentElement
-                ) {
-                    this.videoPlayer.parentElement?.insertBefore(
-                        this.danmakuContainer,
-                        this.videoPlayer.nextSibling
-                    );
-                }
                 if (
                     this.danmakuInputContainer &&
                     !this.danmakuInputContainer.parentElement
@@ -131,11 +120,11 @@ export class YouTubeAdapter implements SiteAdapter {
 
     private onLoadedMetadata = async () => {
         chrome.storage.local.get(["danmakuEnabled"], async (result) => {
-            if (!this.danmaku) return;
-            const { danmakuEnabled } = result ?? true;
-            console.log("onLoadedMetadata called - danmakuEnabled:", danmakuEnabled, "commentsCount:", this.danmaku.getCommentsCount);
+            if (!this.danmaku || !this.videoId) return;
+            const danmakuEnabled = result.danmakuEnabled ?? true;
+
             if (danmakuEnabled === false) {
-                console.log("Danmaku is disabled, skipping comment load");
+                console.log("Danmaku is disabled, skipping display plan load");
                 this.danmakuInputInstance!.updateCommentsStatus(false, 0);
                 return;
             }
@@ -145,16 +134,19 @@ export class YouTubeAdapter implements SiteAdapter {
                 return;
             }
 
-            console.log("Video metadata loaded. Loading comments.");
-            const videoDuration = this.danmaku.videoPlayer.duration / 60;
-            const limit =
-                videoDuration < 5 ? 1000 : videoDuration < 30 ? 5000 : 10000;
+            console.log("Video metadata loaded. Loading display plan.");
+            const plannedComments: PlannedComment[] | null = await getDisplayPlan("youtube", this.videoId);
 
-            console.log("Calling getComments API with videoId:", this.videoId, "limit:", limit);
-            const comments = await getComments("youtube", this.videoId!, limit);
-            console.log("Received comments:", comments.length);
-            this.danmaku.setComments(comments);
-            this.danmakuInputInstance!.updateCommentsCount(comments.length);
+            if (displayPlan && displayPlan.comments) {
+                 console.log("Received display plan with comments:", displayPlan.comments.length);
+                this.danmaku.setComments(displayPlan.comments);
+                this.danmakuInputInstance!.updateCommentsCount(displayPlan.comments.length);
+            } else {
+                 console.log("No display plan received or plan was empty.");
+                 this.danmaku.setComments([]); // Set empty array to clear any old comments
+                 this.danmakuInputInstance!.updateCommentsCount(0);
+            }
+
 
             if (!this.danmaku.videoPlayer.paused) {
                 this.danmaku.play();
@@ -166,37 +158,26 @@ export class YouTubeAdapter implements SiteAdapter {
         videoPlayer: HTMLVideoElement,
         danmaku: Danmaku
     ): Promise<void> {
-        // const onPlay = () => danmaku.play();
-        // const onPause = () => danmaku.pause();
-        // const onSeek = () => danmaku.resyncCommentQueue();
-
         
+        // Remove listener to prevent duplicates on re-initialization
+        videoPlayer.removeEventListener("loadedmetadata", this.onLoadedMetadata);
+        videoPlayer.addEventListener("loadedmetadata", this.onLoadedMetadata);
 
-        // videoPlayer.addEventListener("play", onPlay);
-        // videoPlayer.addEventListener("pause", onPause);
-        // videoPlayer.addEventListener("seeked", onSeek);
-        // videoPlayer.addEventListener("loadedmetadata", this.onLoadedMetadata);
-
-        // danmaku.setVideoEventListeners([
-        //     // { event: "play", listener: onPlay },
-        //     // { event: "pause", listener: onPause },
-        //     // { event: "seeked", listener: onSeek },
-        //     { event: "loadedmetadata", listener: onLoadedMetadata },
-        // ]);
-
-        if (videoPlayer.readyState >= 1) {
+        if (videoPlayer.readyState >= 1) { // HAVE_METADATA
             console.log(
                 "Video metadata was already loaded. Manually triggering comment load."
             );
-            this.onLoadedMetadata();
+            await this.onLoadedMetadata();
         }
 
         if (this.resizeObserver && this.videoElementForObserver) {
             this.resizeObserver.unobserve(this.videoElementForObserver);
         }
-        this.resizeObserver = new ResizeObserver(() => danmaku.resize());
-        this.resizeObserver.observe(videoPlayer);
-        this.videoElementForObserver = videoPlayer;
+        
+        // Danmaku class now handles its own resize logic based on its container
+        // this.resizeObserver = new ResizeObserver(() => danmaku.resize());
+        // this.resizeObserver.observe(videoPlayer);
+        // this.videoElementForObserver = videoPlayer;
     }
 
     private async setupDanmakuInput(element: HTMLElement): Promise<void> {
@@ -225,8 +206,10 @@ export class YouTubeAdapter implements SiteAdapter {
 
     public destroy(): void {
         console.log("Destroying existing Danmaku instance...");
+        if (this.videoPlayer) {
+            this.videoPlayer.removeEventListener("loadedmetadata", this.onLoadedMetadata);
+        }
         if (this.danmaku) {
-            this.danmaku.videoPlayer.removeEventListener("loadedmetadata", this.onLoadedMetadata);
             this.danmaku.destroy();
         }
         if (this.danmakuContainer) {
@@ -240,11 +223,11 @@ export class YouTubeAdapter implements SiteAdapter {
             this.resizeObserver = null;
         }
 
-
         this.videoPlayer = null;
         this.videoElementForObserver = null;
         this.videoId = null;
-        console.log("Danmaku instance hidden, ready for re-use.");
+        this.isInitialized = false; // Set to false so it fully re-initializes next time
+        console.log("Danmaku instance destroyed.");
     }
 
     public getVideoPlayer(): HTMLVideoElement {

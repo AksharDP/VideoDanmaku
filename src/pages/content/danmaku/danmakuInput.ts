@@ -281,29 +281,7 @@ export class DanmakuInput {
             });
         });
 
-        this.densityOptions.forEach((option) => {
-            option.addEventListener("click", () => {
-                const densityValue = option.dataset.density;
-                let density: DensityMode;
-                switch (densityValue) {
-                    case "sparse":
-                        density = DensityMode.SPARSE;
-                        break;
-                    case "normal":
-                        density = DensityMode.NORMAL;
-                        break;
-                    case "dense":
-                        density = DensityMode.DENSE;
-                        break;
-                    default:
-                        density = DensityMode.NORMAL;
-                }
-                this.selectedDensity = density;
-                this.updateDensityUI(density);
-                this.saveSettings();
-            });
-        });
-
+        // Settings are now handled directly by the Danmaku class
         this.speedSlider.addEventListener("input", () => {
             this.speedPercent = parseInt(this.speedSlider.value, 10);
             this.speedValue.value = this.speedPercent.toString();
@@ -397,21 +375,8 @@ export class DanmakuInput {
             option.classList.remove("selected-position")
         );
 
-        // Convert enum value to string for comparison with HTML dataset
-        let positionString: string;
-        switch (position) {
-            case ScrollMode.SLIDE:
-                positionString = "slide";
-                break;
-            case ScrollMode.TOP:
-                positionString = "top";
-                break;
-            case ScrollMode.BOTTOM:
-                positionString = "bottom";
-                break;
-            default:
-                positionString = "slide";
-        }
+        // FIX: For string enums, the variable 'position' already holds the string value.
+        const positionString = position;
 
         const selectedOption = Array.from(this.positionOptions).find(
             (option) => option.dataset.position === positionString
@@ -419,42 +384,6 @@ export class DanmakuInput {
         if (selectedOption) {
             selectedOption.classList.add("selected-position");
         }
-    }
-
-    private updateDensityUI(density: DensityMode) {
-        // Update UI selection - convert enum value to string for comparison with dataset
-        this.densityOptions.forEach((option) => {
-            let densityString: string;
-            switch (density) {
-                case DensityMode.SPARSE:
-                    densityString = "sparse";
-                    break;
-                case DensityMode.NORMAL:
-                    densityString = "normal";
-                    break;
-                case DensityMode.DENSE:
-                    densityString = "dense";
-                    break;
-                default:
-                    densityString = "normal";
-            }
-            option.classList.toggle("selected-density", option.dataset.density === densityString);
-        });
-
-        // Apply density setting to danmaku
-        this.danmaku.setDensity(density);
-    }
-
-    private updateSliderPosition(slider: HTMLInputElement, valueElement: HTMLElement) {
-        const min = parseInt(slider.min, 10);
-        const max = parseInt(slider.max, 10);
-        const value = parseInt(slider.value, 10);
-
-        // Calculate the percentage position of the slider value
-        const percentage = ((value - min) / (max - min)) * 100;
-
-        // Position the value element at the calculated percentage
-        valueElement.style.left = `${percentage}%`;
     }
 
     private handleInput() {
@@ -495,10 +424,6 @@ export class DanmakuInput {
         }
     }
 
-    // private handleCommentButtonClick() {
-    //     this.submitComment();
-    // }
-
     private async submitComment() {
         const content = this.inputField.value.trim();
         if (!content) return;
@@ -513,22 +438,18 @@ export class DanmakuInput {
             this.showError("Video is not playing.");
             return;
         }
-        // validate if selectedColor is valid hex color using regex
+        
         const hexColorRegex = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
         if (!hexColorRegex.test(this.selectedColor)) {
             this.showError("Invalid color selected.");
             return;
         }
-        // validate if selectedPosition is valid ScrollMode
-        if (
-            !Object.values(ScrollMode).includes(this.selectedPosition)
-        ) {
+        
+        if (!Object.values(ScrollMode).includes(this.selectedPosition)) {
             this.showError("Invalid position selected.");
             return;
         }
-        // validate if fontSize is valid FontSize
-
-        // if (!this.selectedColor)
+        
         const response: PostCommentResponse = await postComment(
             "youtube",
             this.videoId,
@@ -545,11 +466,11 @@ export class DanmakuInput {
                 content: content,
                 time: currentTime,
                 color: this.selectedColor,
-                userId: 0,
+                userId: 0, // Placeholder for local comments
                 scrollMode: this.selectedPosition,
                 fontSize: FontSize.NORMAL,
             };
-            this.danmaku.addComment(localComment);
+            this.danmaku.addLocalComment(localComment); // UPDATED METHOD
             this.updateCommentsCount(this.danmaku.getCommentsCount);
             this.inputField.value = "";
             this.handleInput();
@@ -591,7 +512,6 @@ export class DanmakuInput {
 
     private saveSettings() {
         const settings = {
-            density: this.selectedDensity,
             speed: this.speedPercent,
             opacity: this.opacityPercent,
             fontSize: this.fontSizePercent,
@@ -603,14 +523,11 @@ export class DanmakuInput {
         chrome.storage.local.get("danmakuSettings", (result) => {
             const settings = result.danmakuSettings;
             if (settings) {
-                this.selectedDensity = settings.density ?? DensityMode.NORMAL;
                 this.speedPercent = settings.speed ?? 100;
                 this.opacityPercent = settings.opacity ?? 100;
                 this.fontSizePercent = settings.fontSize ?? 100;
             }
-            this.updateDensityUI(this.selectedDensity);
-            this.danmaku.setDensity(this.selectedDensity);
-
+            
             this.speedSlider.value = this.speedPercent.toString();
             this.speedValue.value = this.speedPercent.toString();
             this.danmaku.setSpeed(this.speedPercent);
@@ -625,3 +542,4 @@ export class DanmakuInput {
         });
     }
 }
+
