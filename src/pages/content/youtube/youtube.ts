@@ -19,8 +19,8 @@ export class YouTubeAdapter implements SiteAdapter {
     private danmakuContainer: HTMLDivElement | null = null;
     private danmakuInputContainer: HTMLElement | null = null;
     private danmakuInputInstance: DanmakuInput | null = null;
-    private resizeObserver: ResizeObserver | null = null;
-    private videoElementForObserver: HTMLVideoElement | null = null;
+    // private resizeObserver: ResizeObserver | null = null;
+    // private videoElementForObserver: HTMLVideoElement | null = null;
 
     constructor() {
         this.injectCSS();
@@ -170,9 +170,9 @@ export class YouTubeAdapter implements SiteAdapter {
             await this.onLoadedMetadata();
         }
 
-        if (this.resizeObserver && this.videoElementForObserver) {
-            this.resizeObserver.unobserve(this.videoElementForObserver);
-        }
+        // if (this.resizeObserver && this.videoElementForObserver) {
+            // this.resizeObserver.unobserve(this.videoElementForObserver);
+        // }
         
         // Danmaku class now handles its own resize logic based on its container
         // this.resizeObserver = new ResizeObserver(() => danmaku.resize());
@@ -218,13 +218,13 @@ export class YouTubeAdapter implements SiteAdapter {
         if (this.danmakuInputContainer) {
             this.danmakuInputContainer.remove();
         }
-        if (this.resizeObserver && this.videoElementForObserver) {
-            this.resizeObserver.unobserve(this.videoElementForObserver);
-            this.resizeObserver = null;
-        }
+        // if (this.resizeObserver && this.videoElementForObserver) {
+            // this.resizeObserver.unobserve(this.videoElementForObserver);
+            // this.resizeObserver = null;
+        // }
 
         this.videoPlayer = null;
-        this.videoElementForObserver = null;
+        // this.videoElementForObserver = null;
         this.videoId = null;
         this.isInitialized = false; // Set to false so it fully re-initializes next time
         console.log("Danmaku instance destroyed.");

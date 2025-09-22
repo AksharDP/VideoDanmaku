@@ -252,10 +252,13 @@ export class Danmaku {
     }
     
     private recalculateLocalLanes(): void {
-        const screenHeight = this.container.offsetHeight || this.videoPlayer.offsetHeight || 720;
+        console.debug("Recalculating local lanes...");
+        const screenHeight = this.videoPlayer.offsetHeight;
+        console.debug(`Video player height: ${screenHeight}, lane height: ${this.laneHeight}`);
         this.localLaneCount = Math.max(1, Math.floor(screenHeight / this.laneHeight)) - 1;
         this.localSlidingLanes = new Array(this.localLaneCount).fill(0);
         this.localTopBottomLanes = new Array(this.localLaneCount).fill(0);
+        console.debug(`Local lane count: ${this.localLaneCount}`);
     }
     
     private findAvailableLocalLane(lanes: number[], currentTime: number, duration: number, textWidth: number): number {
@@ -284,6 +287,11 @@ export class Danmaku {
         this.videoPlayer.addEventListener('play', this.play.bind(this));
         this.videoPlayer.addEventListener('pause', this.pause.bind(this));
         this.videoPlayer.addEventListener('seeked', this.resyncCommentQueue.bind(this));
-        this.videoPlayer.addEventListener('resize', this.recalculateLocalLanes.bind(this));
+        // this.videoPlayer.addEventListener('resize', this.recalculateLocalLanes.bind(this));
+        const resizeObserver = new ResizeObserver(() => {
+            this.recalculateLocalLanes();
+        });
+        resizeObserver.observe(this.videoPlayer);
+        console.debug("Added video event listeners.");
     }
 }
