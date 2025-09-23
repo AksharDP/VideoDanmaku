@@ -1,5 +1,5 @@
 import { DanmakuInput } from "../danmaku/danmakuInput";
-import { getDisplayPlan } from "../api"; // UPDATED
+import { getComments } from "../api"; // UPDATED
 import { Danmaku } from "../danmaku/danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import { DisplayPlan, PlannedComment, RawComment } from "../interfaces/danmaku";
@@ -72,7 +72,7 @@ export class YouTubeAdapter implements SiteAdapter {
                 this.danmakuContainer.classList.add("danmaku-container");
                 // The container should be a sibling of the video player, not a child
                 this.videoContainer.appendChild(this.danmakuContainer);
-                
+
                 this.danmaku = new Danmaku(
                     this.videoPlayer,
                     this.danmakuContainer,
@@ -93,9 +93,9 @@ export class YouTubeAdapter implements SiteAdapter {
             } else {
                 console.log("Re-initializing for new video.");
                 // The danmaku instance now just needs a full clear
-                this.danmaku!.destroy(); 
+                this.danmaku!.destroy();
                 this.danmaku = new Danmaku(this.videoPlayer, this.danmakuContainer!, this.controls);
-                
+
                 this.danmakuInputInstance!.updateVideoId(this.videoId);
 
                 if (
@@ -136,16 +136,27 @@ export class YouTubeAdapter implements SiteAdapter {
             }
 
             console.log("Video metadata loaded. Loading display plan.");
-            const rawComments: RawComment[] | null = await getDisplayPlan("youtube", this.videoId!);
+            const limit = !this.videoPlayer
+                ? 1000
+                : this.videoPlayer.duration < 60
+                    ? 400
+                    : this.videoPlayer.duration < 300
+                        ? 1000
+                        : this.videoPlayer.duration < 1800
+                            ? 16000
+                            : 32000;
+            const bucketSize = 5;
+            const maxCommentsPerBucket = 50;
+            const rawComments: RawComment[] | null = await getComments("youtube", this.videoId!, limit, bucketSize, maxCommentsPerBucket);
 
             if (rawComments && rawComments.length > 0) {
                 console.log("Received display plan with comments:", rawComments.length);
                 this.danmaku!.setComments(rawComments);
                 this.danmakuInputInstance!.updateCommentsCount(rawComments.length);
             } else {
-                 console.log("No display plan received or plan was empty.");
-                 this.danmaku!.setComments([]);
-                 this.danmakuInputInstance!.updateCommentsCount(0);
+                console.log("No display plan received or plan was empty.");
+                this.danmaku!.setComments([]);
+                this.danmakuInputInstance!.updateCommentsCount(0);
             }
 
             if (!this.danmaku!.videoPlayer.paused) {
@@ -158,7 +169,7 @@ export class YouTubeAdapter implements SiteAdapter {
         videoPlayer: HTMLVideoElement,
         danmaku: Danmaku
     ): Promise<void> {
-        
+
         // Remove listener to prevent duplicates on re-initialization
         videoPlayer.removeEventListener("loadedmetadata", this.onLoadedMetadata);
         videoPlayer.addEventListener("loadedmetadata", this.onLoadedMetadata);
@@ -171,9 +182,9 @@ export class YouTubeAdapter implements SiteAdapter {
         }
 
         // if (this.resizeObserver && this.videoElementForObserver) {
-            // this.resizeObserver.unobserve(this.videoElementForObserver);
+        // this.resizeObserver.unobserve(this.videoElementForObserver);
         // }
-        
+
         // Danmaku class now handles its own resize logic based on its container
         // this.resizeObserver = new ResizeObserver(() => danmaku.resize());
         // this.resizeObserver.observe(videoPlayer);
@@ -219,8 +230,8 @@ export class YouTubeAdapter implements SiteAdapter {
             this.danmakuInputContainer.remove();
         }
         // if (this.resizeObserver && this.videoElementForObserver) {
-            // this.resizeObserver.unobserve(this.videoElementForObserver);
-            // this.resizeObserver = null;
+        // this.resizeObserver.unobserve(this.videoElementForObserver);
+        // this.resizeObserver = null;
         // }
 
         this.videoPlayer = null;

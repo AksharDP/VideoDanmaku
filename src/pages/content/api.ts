@@ -24,8 +24,6 @@ export interface Comment {
     likes?: number; // Added for backend prioritization
 }
 
-
-
 export interface LoginRequest {
     emailOrUsername: string;
     password: string;
@@ -53,16 +51,21 @@ export interface ReportRequest {
     additionalDetails?: string;
 }
 
-export interface ReportResponse {
+// Base response interface
+export interface BaseResponse {
     success: boolean;
     error?: string;
     message?: string;
 }
 
-export interface PostCommentResponse {
-    success: boolean;
-    error?: string;
+// Extended response interfaces
+export interface PostCommentResponse extends BaseResponse {
     status?: number;
+}
+
+export interface CommentLikesResponse extends BaseResponse {
+    likes?: number;
+    dislikes?: number;
 }
 
 /**
@@ -84,10 +87,10 @@ function mapApiToRaw(apiComment: any): RawComment {
 /**
  * Fetches raw comments from getComments API and plans them client-side into a DisplayPlan.
  */
-export async function getDisplayPlan(platform: string, videoId: string): Promise<RawComment[] | null> {
+export async function getComments(platform: string, videoId: string, limit: number, bucketSize: number, maxCommentsPerBucket: number): Promise<RawComment[] | null> {
     try {
         console.log("getDisplayPlan called with:", { platform, videoId });
-        const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}`;
+        const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}&limit=${limit}&bucketSize=${bucketSize}&maxCommentsPerBucket=${maxCommentsPerBucket}`;
         console.log("Fetching from URL:", url);
         const response = await fetch(url);
         console.log("Response status:", response.status, "ok:", response.ok);
@@ -280,4 +283,192 @@ export async function reportComment(
         console.error("Failed to report comment:", error);
         return false;
     }
+}
+
+export async function likeComment(commentId: number, isLike: boolean): Promise<BaseResponse> {
+    try {
+        const token = await new Promise<string | null>((resolve) => {
+            chrome.storage.local.get("authToken", (result) => {
+                resolve(result.authToken || null);
+            });
+        });
+
+        if (!token) {
+            return { success: false, error: "You must be logged in to like comments." };
+        }
+
+        const url = `${API_BASE_URL}/likeComment`;
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                commentId,
+                isLike,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                chrome.storage.local.remove("authToken");
+                return { success: false, error: "Authentication failed. Please login again." };
+            }
+            return { success: false, error: data.error || `HTTP error! status: ${response.status}` };
+        }
+
+        return { success: data.success };
+    } catch (error) {
+        console.error("Failed to like comment:", error);
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
+        return { success: false, error: "An unknown error occurred." };
+    }
+}
+
+export async function removeLike(commentId: number): Promise<BaseResponse> {
+    try {
+        const token = await new Promise<string | null>((resolve) => {
+            chrome.storage.local.get("authToken", (result) => {
+                resolve(result.authToken || null);
+            });
+        });
+
+        if (!token) {
+            return { success: false, error: "You must be logged in to remove likes." };
+        }
+
+        const url = `${API_BASE_URL}/removeLike`;
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                commentId,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                chrome.storage.local.remove("authToken");
+                return { success: false, error: "Authentication failed. Please login again." };
+            }
+            return { success: false, error: data.error || `HTTP error! status: ${response.status}` };
+        }
+
+        return { success: data.success };
+    } catch (error) {
+        console.error("Failed to remove like:", error);
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
+        return { success: false, error: "An unknown error occurred." };
+    }
+}
+
+export async function deleteComment(commentId: number): Promise<BaseResponse> {
+    try {
+        const token = await new Promise<string | null>((resolve) => {
+            chrome.storage.local.get("authToken", (result) => {
+                resolve(result.authToken || null);
+            });
+        });
+
+        if (!token) {
+            return { success: false, error: "You must be logged in to delete comments." };
+        }
+
+        const url = `${API_BASE_URL}/deleteComment`;
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                commentId,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                chrome.storage.local.remove("authToken");
+                return { success: false, error: "Authentication failed. Please login again." };
+            }
+            return { success: false, error: data.error || `HTTP error! status: ${response.status}` };
+        }
+
+        return { success: data.success };
+    } catch (error) {
+        console.error("Failed to delete comment:", error);
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
+        return { success: false, error: "An unknown error occurred." };
+    }
+}
+
+export async function getCommentLikes(commentId: number): Promise<CommentLikesResponse> {
+    try {
+        const url = `${API_BASE_URL}/commentLikes/${commentId}`;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return { success: false, error: data.error || `HTTP error! status: ${response.status}` };
+        }
+
+        return { 
+            success: data.success,
+            likes: data.likes,
+            dislikes: data.dislikes
+        };
+    } catch (error) {
+        console.error("Failed to get comment likes:", error);
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
+        return { success: false, error: "An unknown error occurred." };
+    }
+}
+
+// Authentication utilities
+export async function isLoggedIn(): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+        chrome.storage.local.get("authToken", (result) => {
+            resolve(!!result.authToken);
+        });
+    });
+}
+
+export async function logout(): Promise<void> {
+    return new Promise<void>((resolve) => {
+        chrome.storage.local.remove("authToken", () => {
+            resolve();
+        });
+    });
+}
+
+export async function getAuthToken(): Promise<string | null> {
+    return new Promise<string | null>((resolve) => {
+        chrome.storage.local.get("authToken", (result) => {
+            resolve(result.authToken || null);
+        });
+    });
 }
