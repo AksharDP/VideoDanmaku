@@ -2,7 +2,7 @@ import { postComment, Comment, PostCommentResponse } from "../api";
 import { Danmaku } from "./danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
-import { DensityMode, FontSize, ScrollMode } from "../interfaces/enum";
+import { DensityMap, DensityMode, FontSize, ScrollMode } from "../interfaces/enum";
 
 export class DanmakuInput {
     private danmaku: Danmaku;
@@ -261,27 +261,30 @@ export class DanmakuInput {
 
         this.positionOptions.forEach((option) => {
             option.addEventListener("click", () => {
-                const position = option.dataset.position;
-                let scrollMode: ScrollMode;
-                switch (position) {
-                    case "slide":
-                        scrollMode = ScrollMode.SLIDE;
-                        break;
-                    case "top":
-                        scrollMode = ScrollMode.TOP;
-                        break;
-                    case "bottom":
-                        scrollMode = ScrollMode.BOTTOM;
-                        break;
-                    default:
-                        scrollMode = ScrollMode.SLIDE;
+                let scrollMode: ScrollMode = option.dataset.position as ScrollMode;
+                if (!scrollMode || !Object.values(ScrollMode).includes(scrollMode)) {
+                    console.error("DanmakuInput: Invalid position option selected:", scrollMode);
+                    scrollMode = ScrollMode.SLIDE;
                 }
                 this.selectedPosition = scrollMode;
                 this.updateSelectedPositionUI(scrollMode);
             });
         });
 
-        // Settings are now handled directly by the Danmaku class
+        this.densityOptions.forEach((option) => {
+            option.addEventListener("click", () => {
+                let density = option.dataset.density as DensityMode;
+                if (!density || !Object.values(DensityMode).includes(density)) {
+                    console.error("DanmakuInput: Invalid density option selected:", density);
+                    density = DensityMode.NORMAL;
+                }
+                this.selectedDensity = density;
+                this.updateSelectedDensityUI(density);
+                this.danmaku.setDensity(density);
+                this.saveSettings();
+            });
+        });
+
         this.speedSlider.addEventListener("input", () => {
             this.speedPercent = parseInt(this.speedSlider.value, 10);
             this.speedValue.value = this.speedPercent.toString();
@@ -353,37 +356,41 @@ export class DanmakuInput {
     }
 
     private updateSelectedColorUI(color: string) {
-        this.colorBoxes.forEach((box) =>
-            box.classList.remove("selected-color")
-        );
+        // Remove selection from all color boxes and custom picker
+        this.colorBoxes.forEach(box => box.classList.remove("selected-color"));
         this.customColorPicker.classList.remove("selected-color");
 
+        // Try to find a color box matching the color
         const selectedBox = Array.from(this.colorBoxes).find(
-            (box) => box.dataset.color === color
+            box => box.dataset.color?.toLowerCase() === color.toLowerCase()
         );
 
         if (selectedBox) {
             selectedBox.classList.add("selected-color");
         } else {
             this.customColorPicker.classList.add("selected-color");
-            this.customColorPicker.value = color;
+            if (this.customColorPicker.value.toLowerCase() !== color.toLowerCase()) {
+                this.customColorPicker.value = color;
+            }
         }
     }
 
     private updateSelectedPositionUI(position: ScrollMode) {
-        this.positionOptions.forEach((option) =>
-            option.classList.remove("selected-position")
+        this.positionOptions.forEach(option =>
+            option.classList.toggle(
+                "selected-position",
+                option.dataset.position === position
+            )
         );
+    }
 
-        // FIX: For string enums, the variable 'position' already holds the string value.
-        const positionString = position;
-
-        const selectedOption = Array.from(this.positionOptions).find(
-            (option) => option.dataset.position === positionString
+    private updateSelectedDensityUI(density: DensityMode) {
+        this.densityOptions.forEach(option =>
+            option.classList.toggle(
+                "selected-density",
+                option.dataset.density === density
+            )
         );
-        if (selectedOption) {
-            selectedOption.classList.add("selected-position");
-        }
     }
 
     private handleInput() {
@@ -512,6 +519,7 @@ export class DanmakuInput {
 
     private saveSettings() {
         const settings = {
+            density: this.selectedDensity,
             speed: this.speedPercent,
             opacity: this.opacityPercent,
             fontSize: this.fontSizePercent,
@@ -526,7 +534,11 @@ export class DanmakuInput {
                 this.speedPercent = settings.speed ?? 100;
                 this.opacityPercent = settings.opacity ?? 100;
                 this.fontSizePercent = settings.fontSize ?? 100;
+                this.selectedDensity = settings.density ?? DensityMode.NORMAL;
             }
+
+            this.updateSelectedDensityUI(this.selectedDensity);
+            this.danmaku.setDensity(this.selectedDensity);
             
             this.speedSlider.value = this.speedPercent.toString();
             this.speedValue.value = this.speedPercent.toString();
@@ -542,4 +554,3 @@ export class DanmakuInput {
         });
     }
 }
-

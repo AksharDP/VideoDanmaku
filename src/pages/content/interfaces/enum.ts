@@ -4,7 +4,7 @@ export enum DensityMode {
     DENSE = "dense"
 }
 // delay in milliseconds
-export const DensityConfig = {
+export const DensityMap = {
     [DensityMode.SPARSE]: {
         delay: 300,
     },
@@ -23,6 +23,12 @@ export enum FontSize {
     NORMAL = "normal",
     LARGE = "large",
 }
+
+export const FontMap = {
+    [FontSize.SMALL]: 18,
+    [FontSize.NORMAL]: 24,
+    [FontSize.LARGE]: 32,
+} as const;
 
 export enum ScrollMode {
     SLIDE = "slide",

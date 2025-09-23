@@ -2,7 +2,7 @@ import { DanmakuInput } from "../danmaku/danmakuInput";
 import { getDisplayPlan } from "../api"; // UPDATED
 import { Danmaku } from "../danmaku/danmaku";
 import { LoginModal } from "../modal-login/modal-login";
-import { DisplayPlan, PlannedComment } from "../interfaces/danmaku";
+import { DisplayPlan, PlannedComment, RawComment } from "../interfaces/danmaku";
 import youtubeCss from "../css/sites/youtube.css?raw";
 import danmakuCss from "../css/danmaku.css?raw";
 import danmakuInputCss from "../css/danmaku-input.css?raw";
@@ -136,12 +136,12 @@ export class YouTubeAdapter implements SiteAdapter {
             }
 
             console.log("Video metadata loaded. Loading display plan.");
-            const displayPlan: DisplayPlan | null = await getDisplayPlan("youtube", this.videoId!);
+            const rawComments: RawComment[] | null = await getDisplayPlan("youtube", this.videoId!);
 
-            if (displayPlan && displayPlan.comments.length > 0) {
-                 console.log("Received display plan with comments:", displayPlan.comments.length);
-                this.danmaku!.setComments(displayPlan.comments);
-                this.danmakuInputInstance!.updateCommentsCount(displayPlan.comments.length);
+            if (rawComments && rawComments.length > 0) {
+                console.log("Received display plan with comments:", rawComments.length);
+                this.danmaku!.setComments(rawComments);
+                this.danmakuInputInstance!.updateCommentsCount(rawComments.length);
             } else {
                  console.log("No display plan received or plan was empty.");
                  this.danmaku!.setComments([]);

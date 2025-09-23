@@ -1,7 +1,8 @@
 import { Comment } from "../api";
-import { PlannedComment } from "../interfaces/danmaku";
+import { RawComment, PlannedComment } from "../interfaces/danmaku";
 import { ReportModal } from "../modal-report/modal-report";
-import { DensityConfig, DensityMode, ScrollMode } from "../interfaces/enum";
+import { DensityMap, DensityMode, ScrollMode, FontSize, FontMap } from "../interfaces/enum";
+import { Canvas } from "canvas";
 
 export class Danmaku {
     public videoPlayer: HTMLVideoElement;
@@ -20,9 +21,11 @@ export class Danmaku {
     private localLaneCount: number = 10;
     private localSlidingLanes: number[] = [];
     private localTopBottomLanes: number[] = [];
-    private tempCanvasContext: CanvasRenderingContext2D;
+    // private tempCanvasContext: CanvasRenderingContext2D;
 
     // --- Settings ---
+    private density: DensityMode = DensityMode.NORMAL;
+    private baseDuration = 7000;
     private speedMultiplier: number = 1;
     private opacityLevel: number = 1;
     private fontSizeMultiplier: number = 1;
@@ -39,9 +42,9 @@ export class Danmaku {
 
         this.laneHeight = 30; // Base lane height
         this.reportModal = new ReportModal();
-        
-        const tempCanvas = document.createElement('canvas');
-        this.tempCanvasContext = tempCanvas.getContext('2d')!;
+
+        // const tempCanvas = document.createElement('canvas');
+        // this.tempCanvasContext = tempCanvas.getContext('2d')!;
 
         this.addVideoEventListeners();
         this.recalculateLocalLanes();
@@ -50,9 +53,9 @@ export class Danmaku {
     /**
      * Loads the pre-calculated comments from a DisplayPlan.
      */
-    public setComments(comments: PlannedComment[]): void {
-        this.allComments = comments; // Already sorted by time from the backend
-        this.resyncCommentQueue();
+    public setComments(comments: RawComment[]): void {
+        this.allComments = this.planRawComments(comments);
+        this.syncCommentQueue();
     }
 
     public play(): void {
@@ -66,13 +69,13 @@ export class Danmaku {
         this.isRunning = false;
         this.setAllAnimationsPlayState('paused');
     }
-    
+
     public toggleVisibility(force?: boolean): boolean {
         this.isVisible = force ?? !this.isVisible;
         this.container.style.display = this.isVisible ? "" : "none";
-        if(this.isVisible) {
+        if (this.isVisible) {
             this.play();
-            this.resyncCommentQueue();
+            this.syncCommentQueue();
         } else {
             this.pause();
         }
@@ -82,7 +85,7 @@ export class Danmaku {
     /**
      * Syncs the danmaku display to the current video time.
      */
-    public resyncCommentQueue(): void {
+    public syncCommentQueue(): void {
         if (this.getCommentsCount === 0 || !this.isVisible) return;
 
         const currentTime = this.videoPlayer.currentTime * 1000;
@@ -102,23 +105,129 @@ export class Danmaku {
             }
         }
     }
-    
+
+    public planRawComments(rawComments: RawComment[]): PlannedComment[] {
+        console.debug("Planning raw comments, total:", rawComments.length);
+        console.debug("Container width:", this.container.clientWidth);
+        console.debug("Container height:", this.container.clientHeight);
+        console.debug("Lane height:", this.laneHeight);
+        console.debug("Local lane count:", this.localLaneCount);
+
+        const slidingLanes: number[] = new Array(this.localLaneCount).fill(0);
+        const topBottomLanes: number[] = new Array(this.localLaneCount).fill(0);
+
+        // const context = new Canvas(1, 1).getContext('2d');
+        const context = document.createElement('canvas').getContext('2d')!;
+        if (!context) {
+            console.error("Failed to create canvas context for text measurement.");
+            return [];
+        }
+        const planned: PlannedComment[] = [];
+
+        const sorted = [...rawComments].sort((a, b) => a.time - b.time);
+
+        for (const raw of sorted) {
+            const fontSizePx = FontMap[raw.fontSize] || 24;
+            context.font = `${fontSizePx}px Roboto`;
+            const textWidth = context.measureText(raw.content).width;
+
+            let lanes: number[] | undefined;
+            let duration: number = 0;
+            let reservationTime: number = 0;
+            let lane = -1;
+            let emissionTime = raw.time;
+
+            switch (raw.scrollMode) {
+                case ScrollMode.SLIDE:
+                    lanes = slidingLanes;
+                    duration = this.baseDuration;
+
+                    const containerWidth = this.container.clientWidth || 1;
+                    const timeToEnter = textWidth > 0 ? (textWidth * duration) / (containerWidth + textWidth) : 0;
+                    const densityDelay = DensityMap[this.density].delay;
+                    reservationTime = timeToEnter + densityDelay;
+
+                    for (let i = 0; i < lanes.length; i++) {
+                        if (lanes[i] <= emissionTime) {
+                            lane = i;
+                            lanes[i] = emissionTime + reservationTime;
+                            break;
+                        }
+                    }
+                    break;
+
+                case ScrollMode.TOP:
+                    lanes = topBottomLanes;
+                    duration = this.baseDuration / 2;
+                    reservationTime = duration;
+
+                    // Find the first available top-most lane (0 -> n)
+                    for (let i = 0; i < lanes.length; i++) {
+                        if (lanes[i] <= emissionTime) {
+                            lane = i;
+                            lanes[i] = emissionTime + reservationTime;
+                            break;
+                        }
+                    }
+                    break;
+
+                case ScrollMode.BOTTOM:
+                    lanes = topBottomLanes;
+                    duration = this.baseDuration / 2;
+                    reservationTime = duration;
+
+                    // Find the first available bottom-most lane (iterate in reverse: n -> 0)
+                    for (let i = lanes.length - 1; i >= 0; i--) {
+                        if (lanes[i] <= emissionTime) {
+                            lane = i;
+                            lanes[i] = emissionTime + reservationTime;
+                            break;
+                        }
+                    }
+                    break;
+            }
+
+            // If no free lane was found, place it in the one that will be free the soonest
+            if (lane === -1 && lanes) {
+                const earliestLaneEndTime = Math.min(...lanes);
+                const earliestLaneIndex = lanes.indexOf(earliestLaneEndTime);
+                // ADD THIS: Delay emission to when the lane is free (temporal spreading)
+                emissionTime = Math.max(emissionTime, earliestLaneEndTime);
+                lane = earliestLaneIndex;
+                lanes[lane] = emissionTime + reservationTime;
+            }
+
+            if (lane !== -1) {
+                planned.push({
+                    ...raw,
+                    lane,
+                    duration,
+                    width: textWidth,
+                    time: emissionTime
+                });
+            }
+        }
+
+        return planned;
+    }
+
+
     /**
      * Adds a newly submitted user comment. This comment is not part of the
      * pre-processed plan and is placed in real-time.
      */
     public addLocalComment(comment: Comment): void {
         const currentTime = this.videoPlayer.currentTime * 1000;
-        const textWidth = this.getTextWidth(comment.content, `${24 * this.fontSizeMultiplier}px Roboto`);
+        // const textWidth = this.getTextWidth(comment.content, `${24 * this.fontSizeMultiplier}px Roboto`);
         const duration = comment.scrollMode === ScrollMode.SLIDE ? 7000 : 3500;
 
         let lane = -1;
-        if(comment.scrollMode === ScrollMode.SLIDE) {
-            lane = this.findAvailableLocalLane(this.localSlidingLanes, currentTime, duration, textWidth);
+        if (comment.scrollMode === ScrollMode.SLIDE) {
+            lane = this.findAvailableLocalLane(this.localSlidingLanes, currentTime, duration, 24);
         } else {
             lane = this.findAvailableLocalLane(this.localTopBottomLanes, currentTime, duration, 0);
         }
-        
+
         if (lane === -1) {
             // All lanes are busy, drop the comment for now.
             // A more advanced implementation could queue it.
@@ -130,9 +239,9 @@ export class Danmaku {
             ...comment,
             lane,
             duration,
-            width: textWidth,
+            width: 24, // textWidth
         };
-        
+
         // Insert into allComments array at the correct sorted position
         const insertIndex = this.allComments.findIndex(c => c.time > plannedComment.time);
         if (insertIndex === -1) {
@@ -212,14 +321,14 @@ export class Danmaku {
             this.commentPool.push(element);
         }
     }
-    
+
     public destroy(): void {
         this.pause();
         this.clearCurrentComments();
         this.allComments = [];
         this.commentPool = [];
     }
-    
+
     private clearCurrentComments(): void {
         while (this.container.firstChild) {
             this.returnElementToPool(this.container.firstChild as HTMLElement);
@@ -227,9 +336,15 @@ export class Danmaku {
     }
 
     // --- Settings Methods ---
+    public setDensity(density: DensityMode): void {
+        this.density = density;
+        this.recalculateLocalLanes();
+        this.syncCommentQueue();
+    }
+
     public setSpeed(percent: number): void {
         this.speedMultiplier = Math.max(0.1, percent / 100);
-        this.resyncCommentQueue();
+        this.syncCommentQueue();
     }
 
     public setOpacity(percent: number): void {
@@ -241,16 +356,16 @@ export class Danmaku {
         this.fontSizeMultiplier = Math.max(0.5, percent / 100);
         this.laneHeight = Math.floor(30 * this.fontSizeMultiplier);
         this.recalculateLocalLanes();
-        this.resyncCommentQueue();
+        this.syncCommentQueue();
     }
 
     // --- Helpers and Event Listeners ---
-    
-    private getTextWidth(text: string, font: string): number {
-        this.tempCanvasContext.font = font;
-        return this.tempCanvasContext.measureText(text).width;
-    }
-    
+
+    // private getTextWidth(text: string, font: string): number {
+    // this.tempCanvasContext.font = font;
+    // return this.tempCanvasContext.measureText(text).width;
+    // }
+
     private recalculateLocalLanes(): void {
         console.debug("Recalculating local lanes...");
         const screenHeight = this.videoPlayer.offsetHeight;
@@ -260,14 +375,14 @@ export class Danmaku {
         this.localTopBottomLanes = new Array(this.localLaneCount).fill(0);
         console.debug(`Local lane count: ${this.localLaneCount}`);
     }
-    
+
     private findAvailableLocalLane(lanes: number[], currentTime: number, duration: number, textWidth: number): number {
         for (let i = 0; i < lanes.length; i++) {
             if (lanes[i] < currentTime) {
                 const containerWidth = this.container.offsetWidth;
                 // For sliding comments, reserve the lane until the tail clears the edge
-                const reservationTime = textWidth > 0 
-                    ? (textWidth / (containerWidth + textWidth)) * duration 
+                const reservationTime = textWidth > 0
+                    ? (textWidth / (containerWidth + textWidth)) * duration
                     : duration;
                 lanes[i] = currentTime + reservationTime;
                 return i;
@@ -286,8 +401,7 @@ export class Danmaku {
         this.videoPlayer.addEventListener('timeupdate', this.emitNewComments.bind(this));
         this.videoPlayer.addEventListener('play', this.play.bind(this));
         this.videoPlayer.addEventListener('pause', this.pause.bind(this));
-        this.videoPlayer.addEventListener('seeked', this.resyncCommentQueue.bind(this));
-        // this.videoPlayer.addEventListener('resize', this.recalculateLocalLanes.bind(this));
+        this.videoPlayer.addEventListener('seeked', this.syncCommentQueue.bind(this));
         const resizeObserver = new ResizeObserver(() => {
             this.recalculateLocalLanes();
         });

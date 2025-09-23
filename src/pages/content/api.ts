@@ -82,84 +82,9 @@ function mapApiToRaw(apiComment: any): RawComment {
 }
 
 /**
- * Plans raw comments into planned comments with lanes, durations, widths.
- * Simple sequential lane assignment with overlap allowance.
- */
-function planRawComments(rawComments: RawComment[]): PlannedComment[] {
-    const containerWidth = Math.min(window.innerWidth * 0.9, 1920); // Approx video width
-    const laneHeight = 30;
-    const laneCount = Math.max(5, Math.floor((window.innerHeight || 720) / laneHeight));
-    const slidingLanes: number[] = new Array(laneCount).fill(0);
-    const topBottomLanes: number[] = new Array(laneCount).fill(0);
-
-    // Temp canvas for text width
-    const canvas = document.createElement('canvas');
-    canvas.width = 1000;
-    canvas.height = 40;
-    const context = canvas.getContext('2d')!;
-    const fontSizeMap: Record<FontSize, number> = {
-        [FontSize.SMALL]: 18,
-        [FontSize.NORMAL]: 24,
-        [FontSize.LARGE]: 32,
-    };
-
-    const planned: PlannedComment[] = [];
-
-    const sorted = [...rawComments].sort((a, b) => a.time - b.time);
-
-    for (const raw of sorted) {
-        const fontSizePx = fontSizeMap[raw.fontSize] || 24;
-        context.font = `${fontSizePx}px Roboto`;
-        const textWidth = context.measureText(raw.content).width;
-
-        let lanes: number[];
-        let duration: number;
-        let reservationTime: number;
-
-        const emissionTime = raw.time;
-
-        if (raw.scrollMode === ScrollMode.SLIDE) {
-            lanes = slidingLanes;
-            duration = 8000; // ms
-            reservationTime = textWidth > 0 ? (textWidth / containerWidth) * duration : duration;
-        } else {
-            lanes = topBottomLanes;
-            duration = 5000; // ms for top/bottom
-            reservationTime = duration / 2; // shorter reservation since static
-        }
-
-        // Find available lane (earliest possible)
-        let lane = -1;
-        for (let i = 0; i < lanes.length; i++) {
-            if (lanes[i] <= emissionTime) {
-                lane = i;
-                lanes[i] = emissionTime + reservationTime;
-                break;
-            }
-        }
-
-        // If busy, use lane with earliest end (allow overlap)
-        if (lane === -1) {
-            const minIndex = lanes.indexOf(Math.min(...lanes));
-            lane = minIndex;
-            lanes[lane] = Math.max(emissionTime, lanes[lane]) + reservationTime;
-        }
-
-        planned.push({
-            ...raw,
-            lane,
-            duration,
-            width: textWidth,
-        });
-    }
-
-    return planned;
-}
-
-/**
  * Fetches raw comments from getComments API and plans them client-side into a DisplayPlan.
  */
-export async function getDisplayPlan(platform: string, videoId: string): Promise<DisplayPlan | null> {
+export async function getDisplayPlan(platform: string, videoId: string): Promise<RawComment[] | null> {
     try {
         console.log("getDisplayPlan called with:", { platform, videoId });
         const url = `${API_BASE_URL}/getComments?platform=${platform}&videoId=${videoId}`;
@@ -175,15 +100,15 @@ export async function getDisplayPlan(platform: string, videoId: string): Promise
         if (data.success && Array.isArray(data.comments) && data.comments.length > 0) {
             const rawComments: RawComment[] = data.comments.map(mapApiToRaw);
             console.log("Mapped raw comments:", rawComments.length);
-            const plannedComments = planRawComments(rawComments);
-            console.log("Planned comments:", plannedComments.length);
-            return { comments: plannedComments };
+            // const plannedComments = planRawComments(rawComments);
+            // console.log("Planned comments:", plannedComments.length);
+            return rawComments;
         }
         console.log("No comments or invalid format, returning empty plan");
-        return { comments: [] };
+        return null;
     } catch (error) {
         console.error("Failed to fetch and plan display:", error);
-        return { comments: [] };
+        return null;
     }
 }
 
