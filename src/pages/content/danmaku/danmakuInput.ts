@@ -477,7 +477,7 @@ export class DanmakuInput {
                 scrollMode: this.selectedPosition,
                 fontSize: FontSize.NORMAL,
             };
-            this.danmaku.addLocalComment(localComment); // UPDATED METHOD
+            this.danmaku.addComment(localComment); // UPDATED METHOD
             this.updateCommentsCount(this.danmaku.getCommentsCount);
             this.inputField.value = "";
             this.handleInput();

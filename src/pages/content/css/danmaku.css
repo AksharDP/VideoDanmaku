@@ -22,30 +22,10 @@
     animation-fill-mode: forwards;
 }
 
-/* Specific Animations */
-@keyframes slide {
-    from { transform: translateX(100vw); }
-    to { transform: translateX(-100%); }
-}
-
-.danmaku-animation-slide {
-    animation-name: slide;
-}
-
-
-@keyframes topBottomFade {
-  99% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.danmaku-animation-top, .danmaku-animation-bottom {
+.danmaku-animation-center {
     left: 50%;
     transform: translateX(-50%);
-    animation-duration: var(--danmaku-duration, 7s);
-    animation-name: topBottomFade;
-    animation-fill-mode: forwards;
 }
-
 
 .iridescent-effect-3 {
     background: radial-gradient(
