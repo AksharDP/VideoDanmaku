@@ -1,7 +1,7 @@
 import { Comment } from "../api";
 import { RawComment, PlannedComment } from "../interfaces/danmaku";
 import { ReportModal } from "../modal-report/modal-report";
-import { DensityMode, ScrollMode, FontSize } from "../interfaces/enum";
+import { DensityMode, DensityMap, ScrollMode, FontSize } from "../interfaces/enum";
 
 export class Danmaku {
 
@@ -12,7 +12,6 @@ export class Danmaku {
 	private controls: HTMLElement;
 	private reportModal: ReportModal = new ReportModal();
 	private comments: RawComment[] = [];
-	// private allComments: PlannedComment[] = [];
 
 	public get getCommentsCount(): number { return this.comments.length; }
 
@@ -20,7 +19,6 @@ export class Danmaku {
 	private isRunning = false;
 	private isVisible: boolean = true;
 
-	// --- For local, real-time comment placement ---
 	private oldVideoPlayerHeight: number = 0;
 	private oldVideoPlayerWidth: number = 0;
 	private localLaneCount: number = 10;
@@ -29,7 +27,6 @@ export class Danmaku {
 	private tempCanvasContext: CanvasRenderingContext2D | null = document.createElement('canvas').getContext('2d');
 	private readonly commentFontStack = 'Roboto, Arial, sans-serif';
 
-	// --- Settings ---
 	private density: DensityMode = DensityMode.NORMAL;
 	private baseDuration = 7000;
 	private speedMultiplier: number = 1;
@@ -37,11 +34,9 @@ export class Danmaku {
 	private fontSizeMultiplier: number = 1;
 	private laneHeight: number = 30;
 
-	// --- Performance ---
 	private commentPool: HTMLElement[] = [];
 	private readonly maxPoolSize: number = 150;
 
-	// --- Animation tracking ---
 	private activeAnimations: Map<HTMLElement, Animation> = new Map();
 
 	constructor(videoPlayer: HTMLVideoElement, container: HTMLElement, controls: HTMLElement) {
@@ -57,11 +52,7 @@ export class Danmaku {
 	}
 
 
-	/**
-	* Loads the pre-calculated comments from a DisplayPlan.
-	*/
 	public setComments(comments: RawComment[]): void {
-		// this.allComments = this.planRawComments(comments);
 		this.comments = comments;
 		this.syncCommentQueue();
 	}
@@ -109,7 +100,6 @@ export class Danmaku {
 
 		for (let i = 0; i < this.nextEmitIndex; i++) {
 			const comment = this.comments[i];
-			// ! Maybe create a map for durations based on scroll mode to avoid this check every time
 			let duration = this.baseDuration;
 			if (comment.scrollMode !== ScrollMode.SLIDE) duration = this.baseDuration / 2;
 			const effectiveDuration = duration / this.speedMultiplier;
@@ -126,7 +116,6 @@ export class Danmaku {
 	* pre-processed plan and is placed in real-time.
 	*/
 	public addComment(comment: Comment): void {
-		// binary search insertion into comments array
 		let left = 0;
 		let right = this.comments.length;
 		while (left < right) {
@@ -146,7 +135,9 @@ export class Danmaku {
 	private getAvailableSlidingLane(): number {
 		for (let i = 0; i < this.localLaneCount; i++) {
 			const laneElement = this.localSlidingLanes[i];
-			if (!laneElement || !laneElement.isConnected) {
+            const posX = (laneElement?.getBoundingClientRect().right ?? 0)
+                        + DensityMap[this.density].delay;
+			if (!laneElement || !laneElement.isConnected || posX < this.container.clientWidth) {
 				this.localSlidingLanes[i] = null;
 				return i;
 			}
@@ -404,12 +395,11 @@ export class Danmaku {
 	}
 
 
-	// --- Settings Methods ---
 
 	public setDensity(density: DensityMode): void {
 		this.density = density;
-		this.calculateLanes();
-		this.syncCommentQueue();
+		// this.calculateLanes();
+		// this.syncCommentQueue();
 	}
 
 
@@ -451,33 +441,10 @@ export class Danmaku {
 	}
 
 
-	// private adjustLanes(): void {
-	//     console.debug("Adjusting lanes...");
 
-	//     const maxTop = this.localLaneCount * this.laneHeight;
 
-	//     this.container.querySelectorAll('.danmaku-comment').forEach(el => {
-	//         const comment = el as HTMLElement;
-	//         const commentBounds = comment.getBoundingClientRect();
-	//         console.debug(`Comment top: ${commentBounds.top}, left: ${commentBounds.left}, text: ${comment.textContent}`);
 
-	//         // all comments
-	//         if (parseInt(comment.style.top) > maxTop) {
-	//             this.returnElementToPool(comment);
-	//         }
 
-	//         if (comment.classList.contains('danmaku-animation-slide')) {
-	//             console.debug("Adjusting sliding comment position...");
-	//             // calculate the % of the animation completed based on current left position with old width
-	//             const pos = commentBounds.left;
-	//             const progress = 1 - (commentBounds.left / this.oldVideoPlayerWidth)
-	//             // set new left position based on new width and progress
-	//             const newPos = this.videoPlayer.clientWidth - (this.videoPlayer.clientWidth * progress);
-	//             comment.style.left = `${newPos}px`;
-	//             console.debug(`pos: ${pos}, old width: ${this.oldVideoPlayerWidth}, progress: ${progress}, new left: ${newPos}`);
-	//         }
-	//     });
-	// }
 
 	private adjustLanes(): void {
 		this.debugLog("Adjusting lanes...");
@@ -550,7 +517,6 @@ export class Danmaku {
 
 
 	private setAllAnimationsPlayState(state: 'running' | 'paused'): void {
-		// Instead of setting CSS animationPlayState, control Web Animations API
 		this.activeAnimations.forEach(animation => {
 			if (state === 'running') {
 				animation.play();
