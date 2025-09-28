@@ -3,7 +3,7 @@ export enum DensityMode {
     NORMAL = "normal",
     DENSE = "dense"
 }
-// delay in milliseconds
+// delay in pixels between two comments in the same lane
 export const DensityMap = {
     [DensityMode.SPARSE]: {
         delay: 1000,
