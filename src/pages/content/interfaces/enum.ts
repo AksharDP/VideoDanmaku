@@ -6,7 +6,7 @@ export enum DensityMode {
 // delay in milliseconds
 export const DensityMap = {
     [DensityMode.SPARSE]: {
-        delay: 300,
+        delay: 1000,
     },
     [DensityMode.NORMAL]: {
         delay: 100,
