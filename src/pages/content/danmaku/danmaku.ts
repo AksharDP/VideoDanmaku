@@ -5,7 +5,7 @@ import { DensityMode, DensityMap, ScrollMode, FontSize } from "../interfaces/enu
 
 export class Danmaku {
 
-	private static readonly DEBUG = false;
+	private static readonly DEBUG = true;
 
 	public videoPlayer: HTMLVideoElement;
 	private container: HTMLElement;
@@ -33,6 +33,10 @@ export class Danmaku {
 	private opacityLevel: number = 1;
 	private fontSizeMultiplier: number = 1;
 	private laneHeight: number = 30;
+	private hoverPopup: HTMLElement | null = null;
+	private hoverPopupActiveComment: HTMLElement | null = null;
+	private mouseEnterTimer: number | null = null; // Added timer property
+	private readonly hoverPopupGap = 8;
 
 	private commentPool: HTMLElement[] = [];
 	private readonly maxPoolSize: number = 150;
@@ -81,6 +85,7 @@ export class Danmaku {
 			this.syncCommentQueue();
 		} else {
 			this.pause();
+			this.hideHoverPopup();
 		}
 		return this.isVisible;
 	}
@@ -94,7 +99,8 @@ export class Danmaku {
 
 		const currentTime = this.videoPlayer.currentTime * 1000;
 		this.clearCurrentComments();
-		this.calculateLanes();
+
+		// this.calculateLanes();
 		this.nextEmitIndex = this.comments.findIndex(c => c.time > currentTime);
 		if (this.nextEmitIndex === -1) this.nextEmitIndex = this.comments.length;
 
@@ -132,18 +138,112 @@ export class Danmaku {
 		}
 	}
 
-	private getAvailableSlidingLane(): number {
-		for (let i = 0; i < this.localLaneCount; i++) {
-			const laneElement = this.localSlidingLanes[i];
-            const posX = (laneElement?.getBoundingClientRect().right ?? 0)
-                        + DensityMap[this.density].delay;
-			if (!laneElement || !laneElement.isConnected || posX < this.container.clientWidth) {
-				this.localSlidingLanes[i] = null;
-				return i;
+	// 1) Helper: compute slide bounds at a given elapsed time
+	private computeSlideBoundsAt(elapsedMs: number, width: number): { left: number; right: number } {
+		const containerWidth = this.container.clientWidth;
+		const effectiveDuration = this.baseDuration / this.speedMultiplier;
+		const progress = Math.max(0, Math.min(1, elapsedMs / effectiveDuration));
+		// Matches keyframes: from translateX(containerWidth) to translateX(-width)
+		const x = containerWidth - (containerWidth + width) * progress;
+		return { left: x, right: x + width };
+	}
+
+	// 2) New: resync-time lane chooser for sliding comments
+	private getAvailableSlidingLanesResync(comment: RawComment): number {
+		// Only meaningful for sliding comments; guard optional callers.
+		if (comment.scrollMode !== ScrollMode.SLIDE) return -1;
+
+		const nowMs = this.videoPlayer.currentTime * 1000;
+		const elapsedMs = nowMs - comment.time;
+		const effectiveDuration = this.baseDuration / this.speedMultiplier;
+
+		// If this comment would not be on-screen anymore (or not yet), skip.
+		if (elapsedMs < 0 || elapsedMs >= effectiveDuration) return -1;
+
+		// Match width calculation used during element creation to avoid drift
+		const rawWidth = this.measureCommentWidth(comment.content);
+		const width = Math.ceil(rawWidth);
+		const bounds = this.computeSlideBoundsAt(elapsedMs, width);
+
+		// Ask the bounds-aware lane picker for a lane that is free at these bounds
+		return this.getAvailableSlidingLane(bounds);
+	}
+
+	// 3) Update: make getAvailableSlidingLane optionally bounds-aware
+	private getAvailableSlidingLane(
+		bounds?: { left: number; right: number }
+	): number {
+		// If no bounds provided, keep the existing fast-path logic (original behavior)
+		if (!bounds) {
+			for (let i = 0; i < this.localLaneCount; i++) {
+				const laneElement = this.localSlidingLanes[i];
+				if (!laneElement) return i;
+
+				const rightEdge = laneElement.getBoundingClientRect().right;
+				const delay = DensityMap[this.density].delay;
+				// If the previously assigned element has moved sufficiently left or is detached, reuse the lane
+				if (!laneElement.isConnected || rightEdge + delay < this.container.clientWidth) {
+					this.localSlidingLanes[i] = null;
+					return i;
+				}
 			}
+			return -1;
 		}
+
+		// Bounds-aware scan across all lanes for resync placement
+		const spacing = DensityMap[this.density].delay;
+		const nowMs = this.videoPlayer.currentTime * 1000;
+		const effectiveDuration = this.baseDuration / this.speedMultiplier;
+
+		// For each lane, test if any active sliding comment intersects [left,right] at 'now'
+		laneLoop:
+		for (let i = 0; i < this.localLaneCount; i++) {
+			// Check all active elements in this lane
+			for (const [element] of Array.from(this.activeAnimations.entries())) {
+				if (!element.isConnected) continue;
+
+				const laneToken = element.dataset.laneIndex;
+				if (laneToken === undefined) continue;
+				const laneIndex = Math.trunc(Number(laneToken));
+				if (laneIndex !== i) continue;
+
+				// Only compare against other sliding comments
+				const modeToken = element.dataset.scrollMode;
+				if (modeToken === undefined || modeToken !== ScrollMode.SLIDE.toString()) continue;
+
+				// Reconstruct this element’s width and elapsed time
+				const measured = element.dataset.measuredWidth ? Number(element.dataset.measuredWidth) : undefined;
+				const width = measured ?? element.getBoundingClientRect().width;
+
+				const startToken = element.dataset.emissionTime;
+				if (startToken === undefined) continue;
+				const emissionMs = Number(startToken);
+				const elapsedMs = nowMs - emissionMs;
+
+				// If this element should not be on screen at 'now', skip
+				if (elapsedMs < 0 || elapsedMs >= effectiveDuration) continue;
+
+				// Compute this element's in-flight bounds at 'now'
+				const other = this.computeSlideBoundsAt(elapsedMs, width);
+
+				// Collision test with density spacing as horizontal padding
+				const noOverlap =
+					(bounds.right + spacing) <= other.left ||
+					(bounds.left - spacing) >= other.right;
+
+				if (!noOverlap) {
+					// This lane conflicts; try next lane
+					continue laneLoop;
+				}
+			}
+
+			// No conflicts in this lane for these bounds
+			return i;
+		}
+
 		return -1;
 	}
+
 
 	private getAvailableTopLane(): number {
 		for (let i = 0; i < this.localLaneCount; i++) {
@@ -186,16 +286,19 @@ export class Danmaku {
 		this.debugLog(`Emitting comment: ${comment.content}, mode: ${comment.scrollMode}, isResync: ${isResync}`);
 
 		let lane = -1;
-
 		switch (comment.scrollMode) {
 			case ScrollMode.SLIDE:
-				lane = this.getAvailableSlidingLane();
+				lane = isResync
+					? this.getAvailableSlidingLanesResync(comment)
+					: this.getAvailableSlidingLane();
 				this.debugLog(`Sliding lane assigned: ${lane}`);
 				break;
+
 			case ScrollMode.TOP:
 				lane = this.getAvailableTopLane();
 				this.debugLog(`Top lane assigned: ${lane}`);
 				break;
+
 			case ScrollMode.BOTTOM:
 				lane = this.getAvailableBottomLane();
 				this.debugLog(`Bottom lane assigned: ${lane}`);
@@ -219,7 +322,10 @@ export class Danmaku {
 		danmakuElement.dataset.scrollMode = comment.scrollMode.toString();
 
 		if (comment.scrollMode === ScrollMode.SLIDE) {
+			console.debug(this.localSlidingLanes);
+			console.debug(`Assigning to sliding lane ${lane}`);
 			this.localSlidingLanes[lane] = danmakuElement;
+			console.debug(this.localSlidingLanes);
 		} else {
 			this.localTopBottomLanes[lane] = danmakuElement;
 		}
@@ -328,6 +434,14 @@ export class Danmaku {
 		}
 
 		this.container.appendChild(el);
+
+		if (!el.dataset.popupBound) {
+			el.addEventListener('mouseenter', this.handleCommentMouseEnter);
+			el.addEventListener('mousemove', this.handleCommentMouseEnter); // Added mousemove
+			el.addEventListener('mouseleave', this.handleCommentMouseLeave);
+			el.dataset.popupBound = '1';
+		}
+
 		return el;
 	}
 
@@ -348,6 +462,10 @@ export class Danmaku {
 		}
 
 		this.releaseLane(element);
+
+		if (element === this.hoverPopupActiveComment) {
+			this.hideHoverPopup();
+		}
 
 		element.removeAttribute('data-lane-index');
 		element.removeAttribute('data-scroll-mode');
@@ -383,15 +501,23 @@ export class Danmaku {
 		this.commentPool = [];
 		this.activeAnimations.forEach(animation => animation.cancel());
 		this.activeAnimations.clear();
+		this.hideHoverPopup(true);
 	}
 
 
 	private clearCurrentComments(): void {
 		while (this.container.firstChild) {
-			this.returnElementToPool(this.container.firstChild as HTMLElement);
+			const child = this.container.firstChild as HTMLElement;
+			if (child === this.hoverPopup) {
+				this.container.removeChild(child);
+			} else {
+				this.returnElementToPool(child);
+			}
 		}
 		this.localSlidingLanes = new Array(this.localLaneCount).fill(null);
 		this.localTopBottomLanes = new Array(this.localLaneCount).fill(null);
+		this.activeAnimations.clear();
+		this.hideHoverPopup();
 	}
 
 
@@ -405,7 +531,7 @@ export class Danmaku {
 
 	public setSpeed(percent: number): void {
 		this.speedMultiplier = Math.max(0.1, percent / 100);
-		this.syncCommentQueue();
+		// this.syncCommentQueue();
 	}
 
 
@@ -419,7 +545,7 @@ export class Danmaku {
 		this.fontSizeMultiplier = Math.max(0.5, percent / 100);
 		this.laneHeight = Math.floor(30 * this.fontSizeMultiplier);
 		this.calculateLanes();
-		this.syncCommentQueue();
+		// this.syncCommentQueue();
 	}
 
 
@@ -545,5 +671,195 @@ export class Danmaku {
 	private debugLog(...args: unknown[]): void {
 		if (!Danmaku.DEBUG) return;
 		console.debug(...args);
+	}
+
+	// This method is now a debouncer
+	private handleCommentMouseEnter = (event: MouseEvent): void => {
+		const target = event.currentTarget as HTMLElement;
+		if (!target) return;
+
+		if (this.mouseEnterTimer) {
+			clearTimeout(this.mouseEnterTimer);
+		}
+
+		this.mouseEnterTimer = window.setTimeout(() => {
+			this._showPopupAndPauseAnimation(target, event);
+		}, 50);
+	};
+
+	// Original logic moved to a new private method
+	private _showPopupAndPauseAnimation(target: HTMLElement, event: MouseEvent): void {
+		if (!target) return;
+
+		const related = event.relatedTarget as Node | null;
+		const fromPopup = Boolean(related && this.hoverPopup && this.hoverPopup.contains(related));
+		const previousActive = this.hoverPopupActiveComment;
+		const isSameCommentReenter = fromPopup && previousActive === target;
+
+		this.hoverPopupActiveComment = target;
+
+		if (isSameCommentReenter && this.hoverPopup) {
+			console.debug("Re-entered same comment from popup, keeping popup visible.");
+			this.hoverPopup.style.display = 'flex';
+			this.hoverPopup.style.visibility = 'visible';
+		} else {
+			console.debug("Showing popup for new comment.");
+			this.showHoverPopup(target, event);
+		}
+
+		const animation = this.activeAnimations.get(target);
+		if (animation) {
+			animation.pause();
+		}
+	}
+
+	private handleCommentMouseLeave = (event: MouseEvent): void => {
+		// Clear any pending timer when the mouse leaves
+		if (this.mouseEnterTimer) {
+			clearTimeout(this.mouseEnterTimer);
+			this.mouseEnterTimer = null;
+		}
+
+		const target = event.currentTarget as HTMLElement | null;
+		if (!target) return;
+
+		const nextTarget = event.relatedTarget as Node | null;
+		if (nextTarget && this.hoverPopup && this.hoverPopup.contains(nextTarget)) {
+			return;
+		}
+
+		if (this.isRunning) {
+			const animation = this.activeAnimations.get(target);
+			if (animation) {
+				animation.play();
+			}
+		}
+
+		if (target === this.hoverPopupActiveComment) {
+			this.hoverPopupActiveComment = null;
+		}
+
+		this.hideHoverPopup();
+	};
+
+	private createHoverPopup(): HTMLElement {
+		if (this.hoverPopup) return this.hoverPopup;
+		// if (getComputedStyle(this.container).position === 'static') {
+		// 	this.container.style.position = 'relative';
+		// }
+		const popup = document.createElement('div');
+		popup.className = 'danmaku-popup';
+		const copyBtn = document.createElement('button');
+		copyBtn.className = 'danmaku-popup-button';
+		copyBtn.title = 'Copy';
+		copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+		copyBtn.addEventListener('click', () => {
+			if (this.hoverPopupActiveComment) {
+				navigator.clipboard.writeText(this.hoverPopupActiveComment.textContent || '').then(() => {
+					console.debug('Copied comment text to clipboard');
+				});
+			}
+		});
+		popup.appendChild(copyBtn);
+		const reportBtn = document.createElement('button');
+		reportBtn.className = 'danmaku-popup-button';
+		reportBtn.title = 'Report';
+		reportBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+		reportBtn.addEventListener('click', () => {
+			if (this.hoverPopupActiveComment) {
+				// Handle report action
+			}
+		});
+		popup.appendChild(reportBtn);
+		// popup.querySelectorAll<SVGElement>('svg').forEach(svg => {
+		// 	svg.setAttribute('width', '16');
+		// 	svg.setAttribute('height', '16');
+		// 	svg.setAttribute('viewBox', '0 0 24 24');
+		// 	if (!svg.innerHTML.trim()) {
+		// 		svg.innerHTML = '<rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" />';
+		// 	}
+		// });
+		popup.addEventListener('mouseleave', this.handlePopupMouseLeave);
+		this.container.appendChild(popup);
+		// this.hoverPopup = popup;
+		return popup;
+	}
+
+	private handlePopupMouseLeave = (event: MouseEvent): void => {
+		const nextTarget = event.relatedTarget as Node | null;
+		if (nextTarget && this.hoverPopupActiveComment && this.hoverPopupActiveComment.contains(nextTarget as Node)) {
+			return;
+		}
+
+		if (this.hoverPopupActiveComment && this.isRunning) {
+			const animation = this.activeAnimations.get(this.hoverPopupActiveComment);
+			if (animation) {
+				animation.play();
+			}
+		}
+
+		this.hoverPopupActiveComment = null;
+		this.hideHoverPopup();
+	};
+
+	private showHoverPopup(target: HTMLElement, event: MouseEvent): void {
+		// const popup = this.ensureHoverPopup();
+		console.debug(this.hoverPopup);
+		if (!this.hoverPopup) {
+			this.hoverPopup = this.createHoverPopup();
+		};
+		this.hoverPopup.style.display = 'flex';
+		this.hoverPopup.style.visibility = 'visible';
+		this.positionHoverPopup(this.hoverPopup, event, target);
+		// this.hoverPopup.style.visibility = 'visible';
+	}
+
+	private positionHoverPopup(popup: HTMLElement, event: MouseEvent, target: HTMLElement): void {
+
+		const containerRect = this.container.getBoundingClientRect();
+		const videoPlayerRect = this.videoPlayer.getBoundingClientRect();
+		const commentRect = target.getBoundingClientRect();
+		const popupRect = popup.getBoundingClientRect();
+		const popupWidth = popupRect.width || popup.offsetWidth;
+		const popupHeight = popupRect.height || popup.offsetHeight;
+
+		this.debugLog(`Positioning hover popup: containerRect=${JSON.stringify(containerRect)}, commentRect=${JSON.stringify(commentRect)}, popupRect=${JSON.stringify(popupRect)}`);
+
+		let popupLeft = (event.clientX - containerRect.left)
+		console.debug(`Initial popupLeft: ${popupLeft}`);
+		if (popupLeft < 0) {
+			popupLeft = 0;
+			console.debug(`Adjusted popupLeft to prevent overflow: ${popupLeft}`);
+		} else if (popupLeft + popupRect.width > containerRect.width) {
+			popupLeft = containerRect.width - popupRect.width;
+			console.debug(`Adjusted popupLeft to prevent overflow: ${popupLeft}`);
+		}
+
+		const top = commentRect.bottom - videoPlayerRect.top
+		let popupTop = top;
+		console.debug(`Initial popupTop: ${popupTop}`);
+		if (popupTop + popupHeight > videoPlayerRect.height) {
+			popupTop = commentRect.top - videoPlayerRect.top - popupHeight
+			console.debug(`Adjusted popupTop to prevent overflow: ${popupTop}`);
+		} else if (popupTop < 0) {
+			popupTop = 0;
+			console.debug(`Adjusted popupTop to prevent overflow: ${popupTop}`);
+		}
+
+		this.debugLog(`Calculated positions: popupLeft=${popupLeft}, popupTop=${popupTop}`);
+
+		popup.style.left = `${popupLeft}px`;
+		popup.style.top = `${popupTop}px`;
+	}
+
+	private hideHoverPopup(remove = false): void {
+		if (!this.hoverPopup) return;
+		this.hoverPopup.style.display = 'none';
+		this.hoverPopup.style.visibility = 'hidden';
+		if (remove) {
+			this.hoverPopup.remove();
+			this.hoverPopup = null;
+		}
+		this.hoverPopupActiveComment = null;
 	}
 }
