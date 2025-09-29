@@ -28,6 +28,7 @@ export class Danmaku {
 	private readonly commentFontStack = 'Roboto, Arial, sans-serif';
 	private containerWidth = 0;
 	private readonly measurementCache = new Map<string, number>();
+	private readonly slidingLaneElements = new Map<number, Set<HTMLElement>>();
 
 	private density: DensityMode = DensityMode.NORMAL;
 	private baseDuration = 7000;
@@ -183,63 +184,63 @@ export class Danmaku {
 
 				const rightEdge = laneElement.getBoundingClientRect().right;
 				const delay = DensityMap[this.density].delay;
-				// If the previously assigned element has moved sufficiently left or is detached, reuse the lane
 				if (!laneElement.isConnected || rightEdge + delay < containerWidth) {
 					this.localSlidingLanes[i] = null;
+					this.slidingLaneElements.delete(i);
 					return i;
 				}
 			}
 			return -1;
 		}
 
-		// Bounds-aware scan across all lanes for resync placement
 		const spacing = DensityMap[this.density].delay;
 		const nowMs = this.videoPlayer.currentTime * 1000;
 		const effectiveDuration = this.baseDuration / this.speedMultiplier;
 
-		// For each lane, test if any active sliding comment intersects [left,right] at 'now'
 		laneLoop:
 		for (let i = 0; i < this.localLaneCount; i++) {
-			// Check all active elements in this lane
-			for (const [element] of Array.from(this.activeAnimations.entries())) {
-				if (!element.isConnected) continue;
+			const laneSet = this.slidingLaneElements.get(i);
+			if (!laneSet || laneSet.size === 0) {
+				this.slidingLaneElements.delete(i);
+				return i;
+			}
 
-				const laneToken = element.dataset.laneIndex;
-				if (laneToken === undefined) continue;
-				const laneIndex = Math.trunc(Number(laneToken));
-				if (laneIndex !== i) continue;
-
-				// Only compare against other sliding comments
-				const modeToken = element.dataset.scrollMode;
-				if (modeToken === undefined || modeToken !== ScrollMode.SLIDE.toString()) continue;
-
-				// Reconstruct this element’s width and elapsed time
-				const measured = element.dataset.measuredWidth ? Number(element.dataset.measuredWidth) : undefined;
-				const width = measured ?? element.getBoundingClientRect().width;
+			for (const element of laneSet) {
+				if (!element.isConnected) {
+					laneSet.delete(element);
+					continue;
+				}
 
 				const startToken = element.dataset.emissionTime;
-				if (startToken === undefined) continue;
+				const animation = this.activeAnimations.get(element);
+				if (!startToken || !animation) {
+					laneSet.delete(element);
+					continue;
+				}
+
 				const emissionMs = Number(startToken);
 				const elapsedMs = nowMs - emissionMs;
+				if (elapsedMs < 0 || elapsedMs >= effectiveDuration) {
+					laneSet.delete(element);
+					continue;
+				}
 
-				// If this element should not be on screen at 'now', skip
-				if (elapsedMs < 0 || elapsedMs >= effectiveDuration) continue;
-
-				// Compute this element's in-flight bounds at 'now'
+				const measured = element.dataset.measuredWidth ? Number(element.dataset.measuredWidth) : undefined;
+				const width = measured ?? element.getBoundingClientRect().width;
 				const other = this.computeSlideBoundsAt(elapsedMs, width);
 
-				// Collision test with density spacing as horizontal padding
 				const noOverlap =
 					(bounds.right + spacing) <= other.left ||
 					(bounds.left - spacing) >= other.right;
 
 				if (!noOverlap) {
-					// This lane conflicts; try next lane
 					continue laneLoop;
 				}
 			}
 
-			// No conflicts in this lane for these bounds
+			if (laneSet.size === 0) {
+				this.slidingLaneElements.delete(i);
+			}
 			return i;
 		}
 
@@ -325,6 +326,7 @@ export class Danmaku {
 
 		if (comment.scrollMode === ScrollMode.SLIDE) {
 			this.localSlidingLanes[lane] = danmakuElement;
+			this.registerSlidingElement(lane, danmakuElement);
 		} else {
 			this.localTopBottomLanes[lane] = danmakuElement;
 		}
@@ -499,6 +501,10 @@ export class Danmaku {
 		if (lane < this.localTopBottomLanes.length && this.localTopBottomLanes[lane] === element) {
 			this.localTopBottomLanes[lane] = null;
 		}
+
+		if (element.dataset.scrollMode === ScrollMode.SLIDE.toString()) {
+			this.pruneSlidingLaneElement(lane, element);
+		}
 	}
 
 	public destroy(): void {
@@ -510,6 +516,7 @@ export class Danmaku {
 		this.activeAnimations.clear();
 		this.hideHoverPopup(true);
 		this.measurementCache.clear();
+		this.slidingLaneElements.clear();
 	}
 
 
@@ -525,6 +532,7 @@ export class Danmaku {
 		this.localSlidingLanes = new Array(this.localLaneCount).fill(null);
 		this.localTopBottomLanes = new Array(this.localLaneCount).fill(null);
 		this.activeAnimations.clear();
+		this.slidingLaneElements.clear();
 		this.hideHoverPopup();
 	}
 
@@ -590,6 +598,24 @@ export class Danmaku {
 		return this.containerWidth || this.container.clientWidth;
 	}
 
+	private registerSlidingElement(lane: number, element: HTMLElement): void {
+		let laneSet = this.slidingLaneElements.get(lane);
+		if (!laneSet) {
+			laneSet = new Set<HTMLElement>();
+			this.slidingLaneElements.set(lane, laneSet);
+		}
+		laneSet.add(element);
+	}
+
+	private pruneSlidingLaneElement(lane: number, element: HTMLElement): void {
+		const laneSet = this.slidingLaneElements.get(lane);
+		if (!laneSet) return;
+		laneSet.delete(element);
+		if (laneSet.size === 0) {
+			this.slidingLaneElements.delete(lane);
+		}
+	}
+
 	private adjustLanes(): void {
 		this.debugLog("Adjusting lanes...");
 
@@ -631,7 +657,7 @@ export class Danmaku {
 				const targetWidth = measuredWidth ?? element.getBoundingClientRect().width;
 
 				const newKeyframes = [
-					{ transform: `translateX(${this.container.clientWidth}px)` },
+					{ transform: `translateX(${this.getContainerWidth()}px)` },
 					{ transform: `translateX(-${targetWidth}px)` }
 				];
 
@@ -732,11 +758,11 @@ export class Danmaku {
 		this.hoverPopupActiveComment = target;
 
 		if (isSameCommentReenter && this.hoverPopup) {
-			console.debug("Re-entered same comment from popup, keeping popup visible.");
+			this.debugLog("Re-entered same comment from popup, keeping popup visible.");
 			this.hoverPopup.style.display = 'flex';
 			this.hoverPopup.style.visibility = 'visible';
 		} else {
-			console.debug("Showing popup for new comment.");
+			this.debugLog("Showing popup for new comment.");
 			this.showHoverPopup(target, event);
 		}
 
