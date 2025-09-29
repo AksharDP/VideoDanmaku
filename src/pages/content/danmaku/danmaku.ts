@@ -29,6 +29,7 @@ export class Danmaku {
 	private containerWidth = 0;
 	private readonly measurementCache = new Map<string, number>();
 	private readonly slidingLaneElements = new Map<number, Set<HTMLElement>>();
+	private readonly slidingMeta = new WeakMap<HTMLElement, { emissionMs: number; width: number }>();
 
 	private density: DensityMode = DensityMode.NORMAL;
 	private baseDuration = 7000;
@@ -186,7 +187,6 @@ export class Danmaku {
 				const delay = DensityMap[this.density].delay;
 				if (!laneElement.isConnected || rightEdge + delay < containerWidth) {
 					this.localSlidingLanes[i] = null;
-					this.slidingLaneElements.delete(i);
 					return i;
 				}
 			}
@@ -208,27 +208,25 @@ export class Danmaku {
 			for (const element of laneSet) {
 				if (!element.isConnected) {
 					laneSet.delete(element);
+					this.slidingMeta.delete(element);
 					continue;
 				}
 
-				const startToken = element.dataset.emissionTime;
-				const animation = this.activeAnimations.get(element);
-				if (!startToken || !animation) {
+				const metadata = this.ensureSlidingMetadata(element);
+				if (!metadata) {
 					laneSet.delete(element);
+					this.slidingMeta.delete(element);
 					continue;
 				}
 
-				const emissionMs = Number(startToken);
-				const elapsedMs = nowMs - emissionMs;
+				const elapsedMs = nowMs - metadata.emissionMs;
 				if (elapsedMs < 0 || elapsedMs >= effectiveDuration) {
 					laneSet.delete(element);
+					this.slidingMeta.delete(element);
 					continue;
 				}
 
-				const measured = element.dataset.measuredWidth ? Number(element.dataset.measuredWidth) : undefined;
-				const width = measured ?? element.getBoundingClientRect().width;
-				const other = this.computeSlideBoundsAt(elapsedMs, width);
-
+				const other = this.computeSlideBoundsAt(elapsedMs, metadata.width);
 				const noOverlap =
 					(bounds.right + spacing) <= other.left ||
 					(bounds.left - spacing) >= other.right;
@@ -315,6 +313,7 @@ export class Danmaku {
 
 		const danmakuElement = this.getElementFromPool(comment);
 		const measuredWidth = danmakuElement.dataset.measuredWidth ? Number(danmakuElement.dataset.measuredWidth) : undefined;
+		const emissionTime = isResync ? comment.time : this.videoPlayer.currentTime * 1000;
 
 		if (comment.scrollMode === ScrollMode.TOP || comment.scrollMode === ScrollMode.BOTTOM) {
 			danmakuElement.classList.add('danmaku-animation-center');
@@ -323,10 +322,11 @@ export class Danmaku {
 		danmakuElement.style.top = `${lane * this.laneHeight}px`;
 		danmakuElement.dataset.laneIndex = lane.toString();
 		danmakuElement.dataset.scrollMode = comment.scrollMode.toString();
+		danmakuElement.dataset.emissionTime = emissionTime.toString();
 
 		if (comment.scrollMode === ScrollMode.SLIDE) {
 			this.localSlidingLanes[lane] = danmakuElement;
-			this.registerSlidingElement(lane, danmakuElement);
+			this.registerSlidingElement(lane, danmakuElement, emissionTime, measuredWidth);
 		} else {
 			this.localTopBottomLanes[lane] = danmakuElement;
 		}
@@ -438,7 +438,6 @@ export class Danmaku {
 
 		if (!el.dataset.popupBound) {
 			el.addEventListener('mouseenter', this.handleCommentMouseEnter);
-			el.addEventListener('mousemove', this.handleCommentMouseEnter); // Added mousemove
 			el.addEventListener('mouseleave', this.handleCommentMouseLeave);
 			el.dataset.popupBound = '1';
 		}
@@ -475,6 +474,7 @@ export class Danmaku {
 		if (element === this.hoverPopupActiveComment) {
 			this.hideHoverPopup();
 		}
+		this.slidingMeta.delete(element);
 
 		element.removeAttribute('data-lane-index');
 		element.removeAttribute('data-scroll-mode');
@@ -598,23 +598,51 @@ export class Danmaku {
 		return this.containerWidth || this.container.clientWidth;
 	}
 
-	private registerSlidingElement(lane: number, element: HTMLElement): void {
+	private registerSlidingElement(lane: number, element: HTMLElement, emissionMs: number, measuredWidth?: number): void {
 		let laneSet = this.slidingLaneElements.get(lane);
 		if (!laneSet) {
 			laneSet = new Set<HTMLElement>();
 			this.slidingLaneElements.set(lane, laneSet);
 		}
 		laneSet.add(element);
+
+		const widthFromParam = measuredWidth ?? (element.dataset.measuredWidth ? Number(element.dataset.measuredWidth) : NaN);
+		const width = Number.isFinite(widthFromParam) ? widthFromParam : this.measureCommentWidth(element.textContent || '');
+		if (width > 0) {
+			this.slidingMeta.set(element, { emissionMs, width });
+		}
 	}
 
 	private pruneSlidingLaneElement(lane: number, element: HTMLElement): void {
 		const laneSet = this.slidingLaneElements.get(lane);
 		if (!laneSet) return;
 		laneSet.delete(element);
+		this.slidingMeta.delete(element);
 		if (laneSet.size === 0) {
 			this.slidingLaneElements.delete(lane);
 		}
 	}
+
+	private ensureSlidingMetadata(element: HTMLElement): { emissionMs: number; width: number } | null {
+		const existing = this.slidingMeta.get(element);
+		if (existing && Number.isFinite(existing.emissionMs) && Number.isFinite(existing.width)) {
+			return existing;
+		}
+
+		const emissionToken = element.dataset.emissionTime;
+		if (!emissionToken) return null;
+		const emissionMs = Number(emissionToken);
+		if (!Number.isFinite(emissionMs)) return null;
+
+		const widthToken = element.dataset.measuredWidth;
+		const width = widthToken !== undefined ? Number(widthToken) : this.measureCommentWidth(element.textContent || '');
+		if (!Number.isFinite(width) || width <= 0) return null;
+
+		const metadata = { emissionMs, width };
+		this.slidingMeta.set(element, metadata);
+		return metadata;
+	}
+
 
 	private adjustLanes(): void {
 		this.debugLog("Adjusting lanes...");
