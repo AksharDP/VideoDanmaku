@@ -5,7 +5,7 @@ import { DensityMode, DensityMap, ScrollMode, FontSize } from "../interfaces/enu
 
 export class Danmaku {
 
-	private static readonly DEBUG = true;
+	private static readonly DEBUG = false;
 
 	public videoPlayer: HTMLVideoElement;
 	private container: HTMLElement;
@@ -710,8 +710,23 @@ export class Danmaku {
 		if (!target) return;
 
 		const related = event.relatedTarget as Node | null;
-		const fromPopup = Boolean(related && this.hoverPopup && this.hoverPopup.contains(related));
 		const previousActive = this.hoverPopupActiveComment;
+		const popupVisible = Boolean(
+			this.hoverPopup &&
+			this.hoverPopup.style.display !== 'none' &&
+			this.hoverPopup.style.visibility !== 'hidden'
+		);
+
+		if (previousActive === target && popupVisible) {
+			this.hoverPopupActiveComment = target;
+			const animation = this.activeAnimations.get(target);
+			if (animation) {
+				animation.pause();
+			}
+			return;
+		}
+
+		const fromPopup = Boolean(related && this.hoverPopup && this.hoverPopup.contains(related));
 		const isSameCommentReenter = fromPopup && previousActive === target;
 
 		this.hoverPopupActiveComment = target;
