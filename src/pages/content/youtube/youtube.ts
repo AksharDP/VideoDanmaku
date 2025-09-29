@@ -70,7 +70,6 @@ export class YouTubeAdapter implements SiteAdapter {
                 console.log("First-time initialization.");
                 this.danmakuContainer = document.createElement("div");
                 this.danmakuContainer.classList.add("danmaku-container");
-                // The container should be a sibling of the video player, not a child
                 this.videoContainer.appendChild(this.danmakuContainer);
 
                 this.danmaku = new Danmaku(
