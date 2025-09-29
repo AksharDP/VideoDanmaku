@@ -26,6 +26,8 @@ export class Danmaku {
 	private localTopBottomLanes: (HTMLElement | null)[] = [];
 	private tempCanvasContext: CanvasRenderingContext2D | null = document.createElement('canvas').getContext('2d');
 	private readonly commentFontStack = 'Roboto, Arial, sans-serif';
+	private containerWidth = 0;
+	private readonly measurementCache = new Map<string, number>();
 
 	private density: DensityMode = DensityMode.NORMAL;
 	private baseDuration = 7000;
@@ -140,7 +142,7 @@ export class Danmaku {
 
 	// 1) Helper: compute slide bounds at a given elapsed time
 	private computeSlideBoundsAt(elapsedMs: number, width: number): { left: number; right: number } {
-		const containerWidth = this.container.clientWidth;
+		const containerWidth = this.getContainerWidth();
 		const effectiveDuration = this.baseDuration / this.speedMultiplier;
 		const progress = Math.max(0, Math.min(1, elapsedMs / effectiveDuration));
 		// Matches keyframes: from translateX(containerWidth) to translateX(-width)
@@ -173,8 +175,8 @@ export class Danmaku {
 	private getAvailableSlidingLane(
 		bounds?: { left: number; right: number }
 	): number {
-		// If no bounds provided, keep the existing fast-path logic (original behavior)
 		if (!bounds) {
+			const containerWidth = this.getContainerWidth();
 			for (let i = 0; i < this.localLaneCount; i++) {
 				const laneElement = this.localSlidingLanes[i];
 				if (!laneElement) return i;
@@ -182,7 +184,7 @@ export class Danmaku {
 				const rightEdge = laneElement.getBoundingClientRect().right;
 				const delay = DensityMap[this.density].delay;
 				// If the previously assigned element has moved sufficiently left or is detached, reuse the lane
-				if (!laneElement.isConnected || rightEdge + delay < this.container.clientWidth) {
+				if (!laneElement.isConnected || rightEdge + delay < containerWidth) {
 					this.localSlidingLanes[i] = null;
 					return i;
 				}
@@ -322,10 +324,7 @@ export class Danmaku {
 		danmakuElement.dataset.scrollMode = comment.scrollMode.toString();
 
 		if (comment.scrollMode === ScrollMode.SLIDE) {
-			console.debug(this.localSlidingLanes);
-			console.debug(`Assigning to sliding lane ${lane}`);
 			this.localSlidingLanes[lane] = danmakuElement;
-			console.debug(this.localSlidingLanes);
 		} else {
 			this.localTopBottomLanes[lane] = danmakuElement;
 		}
@@ -359,7 +358,7 @@ export class Danmaku {
 		};
 
 		if (scrollMode === ScrollMode.SLIDE) {
-			const containerWidth = this.container.clientWidth;
+			const containerWidth = this.getContainerWidth();
 			const targetWidth = measuredWidth ?? element.getBoundingClientRect().width;
 			keyframes = [
 				{ transform: `translateX(${containerWidth}px)` },
@@ -449,8 +448,16 @@ export class Danmaku {
 		const ctx = this.tempCanvasContext;
 		if (!ctx) return 0;
 		const fontSize = 24 * this.fontSizeMultiplier;
+		const cacheKey = `${fontSize}:${content}`;
+		const cachedWidth = this.measurementCache.get(cacheKey);
+		if (cachedWidth !== undefined) return cachedWidth;
 		ctx.font = `normal ${fontSize}px ${this.commentFontStack}`;
-		return ctx.measureText(content).width;
+		const width = ctx.measureText(content).width;
+		this.measurementCache.set(cacheKey, width);
+		if (this.measurementCache.size > 500) {
+			this.measurementCache.clear();
+		}
+		return width;
 	}
 
 
@@ -502,6 +509,7 @@ export class Danmaku {
 		this.activeAnimations.forEach(animation => animation.cancel());
 		this.activeAnimations.clear();
 		this.hideHoverPopup(true);
+		this.measurementCache.clear();
 	}
 
 
@@ -545,6 +553,7 @@ export class Danmaku {
 		this.fontSizeMultiplier = Math.max(0.5, percent / 100);
 		this.laneHeight = Math.floor(30 * this.fontSizeMultiplier);
 		this.calculateLanes();
+		this.measurementCache.clear();
 		// this.syncCommentQueue();
 	}
 
@@ -562,15 +571,24 @@ export class Danmaku {
 			this.adjustLanes();
 		}
 
+		this.cacheContainerMetrics();
 		this.oldVideoPlayerHeight = this.videoPlayer.clientHeight;
 		this.oldVideoPlayerWidth = this.videoPlayer.clientWidth;
 	}
 
+	private cacheContainerMetrics(): void {
+		const width = this.container.clientWidth;
+		if (width > 0 && width !== this.containerWidth) {
+			this.containerWidth = width;
+		}
+	}
 
-
-
-
-
+	private getContainerWidth(): number {
+		if (this.containerWidth === 0) {
+			this.cacheContainerMetrics();
+		}
+		return this.containerWidth || this.container.clientWidth;
+	}
 
 	private adjustLanes(): void {
 		this.debugLog("Adjusting lanes...");
@@ -755,9 +773,7 @@ export class Danmaku {
 		copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
 		copyBtn.addEventListener('click', () => {
 			if (this.hoverPopupActiveComment) {
-				navigator.clipboard.writeText(this.hoverPopupActiveComment.textContent || '').then(() => {
-					console.debug('Copied comment text to clipboard');
-				});
+				void navigator.clipboard.writeText(this.hoverPopupActiveComment.textContent || '');
 			}
 		});
 		popup.appendChild(copyBtn);
@@ -803,15 +819,12 @@ export class Danmaku {
 	};
 
 	private showHoverPopup(target: HTMLElement, event: MouseEvent): void {
-		// const popup = this.ensureHoverPopup();
-		console.debug(this.hoverPopup);
 		if (!this.hoverPopup) {
 			this.hoverPopup = this.createHoverPopup();
-		};
+		}
 		this.hoverPopup.style.display = 'flex';
 		this.hoverPopup.style.visibility = 'visible';
 		this.positionHoverPopup(this.hoverPopup, event, target);
-		// this.hoverPopup.style.visibility = 'visible';
 	}
 
 	private positionHoverPopup(popup: HTMLElement, event: MouseEvent, target: HTMLElement): void {
@@ -823,30 +836,20 @@ export class Danmaku {
 		const popupWidth = popupRect.width || popup.offsetWidth;
 		const popupHeight = popupRect.height || popup.offsetHeight;
 
-		this.debugLog(`Positioning hover popup: containerRect=${JSON.stringify(containerRect)}, commentRect=${JSON.stringify(commentRect)}, popupRect=${JSON.stringify(popupRect)}`);
-
 		let popupLeft = (event.clientX - containerRect.left)
-		console.debug(`Initial popupLeft: ${popupLeft}`);
 		if (popupLeft < 0) {
 			popupLeft = 0;
-			console.debug(`Adjusted popupLeft to prevent overflow: ${popupLeft}`);
 		} else if (popupLeft + popupRect.width > containerRect.width) {
 			popupLeft = containerRect.width - popupRect.width;
-			console.debug(`Adjusted popupLeft to prevent overflow: ${popupLeft}`);
 		}
 
 		const top = commentRect.bottom - videoPlayerRect.top
 		let popupTop = top;
-		console.debug(`Initial popupTop: ${popupTop}`);
 		if (popupTop + popupHeight > videoPlayerRect.height) {
 			popupTop = commentRect.top - videoPlayerRect.top - popupHeight
-			console.debug(`Adjusted popupTop to prevent overflow: ${popupTop}`);
 		} else if (popupTop < 0) {
 			popupTop = 0;
-			console.debug(`Adjusted popupTop to prevent overflow: ${popupTop}`);
 		}
-
-		this.debugLog(`Calculated positions: popupLeft=${popupLeft}, popupTop=${popupTop}`);
 
 		popup.style.left = `${popupLeft}px`;
 		popup.style.top = `${popupTop}px`;
