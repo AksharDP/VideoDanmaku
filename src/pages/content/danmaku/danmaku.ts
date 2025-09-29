@@ -39,7 +39,7 @@ export class Danmaku {
 	private laneHeight: number = 30;
 	private hoverPopup: HTMLElement | null = null;
 	private hoverPopupActiveComment: HTMLElement | null = null;
-	private mouseEnterTimer: number | null = null; // Added timer property
+	private mouseEnterTimer: number | null = null;
 	private readonly hoverPopupGap = 8;
 
 	private commentPool: HTMLElement[] = [];
@@ -104,7 +104,6 @@ export class Danmaku {
 		const currentTime = this.videoPlayer.currentTime * 1000;
 		this.clearCurrentComments();
 
-		// this.calculateLanes();
 		this.nextEmitIndex = this.comments.findIndex(c => c.time > currentTime);
 		if (this.nextEmitIndex === -1) this.nextEmitIndex = this.comments.length;
 
@@ -142,38 +141,30 @@ export class Danmaku {
 		}
 	}
 
-	// 1) Helper: compute slide bounds at a given elapsed time
 	private computeSlideBoundsAt(elapsedMs: number, width: number): { left: number; right: number } {
 		const containerWidth = this.getContainerWidth();
 		const effectiveDuration = this.baseDuration / this.speedMultiplier;
 		const progress = Math.max(0, Math.min(1, elapsedMs / effectiveDuration));
-		// Matches keyframes: from translateX(containerWidth) to translateX(-width)
 		const x = containerWidth - (containerWidth + width) * progress;
 		return { left: x, right: x + width };
 	}
 
-	// 2) New: resync-time lane chooser for sliding comments
 	private getAvailableSlidingLanesResync(comment: RawComment): number {
-		// Only meaningful for sliding comments; guard optional callers.
 		if (comment.scrollMode !== ScrollMode.SLIDE) return -1;
 
 		const nowMs = this.videoPlayer.currentTime * 1000;
 		const elapsedMs = nowMs - comment.time;
 		const effectiveDuration = this.baseDuration / this.speedMultiplier;
 
-		// If this comment would not be on-screen anymore (or not yet), skip.
 		if (elapsedMs < 0 || elapsedMs >= effectiveDuration) return -1;
 
-		// Match width calculation used during element creation to avoid drift
 		const rawWidth = this.measureCommentWidth(comment.content);
 		const width = Math.ceil(rawWidth);
 		const bounds = this.computeSlideBoundsAt(elapsedMs, width);
 
-		// Ask the bounds-aware lane picker for a lane that is free at these bounds
 		return this.getAvailableSlidingLane(bounds);
 	}
 
-	// 3) Update: make getAvailableSlidingLane optionally bounds-aware
 	private getAvailableSlidingLane(
 		bounds?: { left: number; right: number }
 	): number {
@@ -540,14 +531,11 @@ export class Danmaku {
 
 	public setDensity(density: DensityMode): void {
 		this.density = density;
-		// this.calculateLanes();
-		// this.syncCommentQueue();
 	}
 
 
 	public setSpeed(percent: number): void {
 		this.speedMultiplier = Math.max(0.1, percent / 100);
-		// this.syncCommentQueue();
 	}
 
 
@@ -562,7 +550,6 @@ export class Danmaku {
 		this.laneHeight = Math.floor(30 * this.fontSizeMultiplier);
 		this.calculateLanes();
 		this.measurementCache.clear();
-		// this.syncCommentQueue();
 	}
 
 
@@ -745,7 +732,6 @@ export class Danmaku {
 		console.debug(...args);
 	}
 
-	// This method is now a debouncer
 	private handleCommentMouseEnter = (event: MouseEvent): void => {
 		const target = event.currentTarget as HTMLElement;
 		if (!target) return;
@@ -759,7 +745,6 @@ export class Danmaku {
 		}, 50);
 	};
 
-	// Original logic moved to a new private method
 	private _showPopupAndPauseAnimation(target: HTMLElement, event: MouseEvent): void {
 		if (!target) return;
 
@@ -801,7 +786,6 @@ export class Danmaku {
 	}
 
 	private handleCommentMouseLeave = (event: MouseEvent): void => {
-		// Clear any pending timer when the mouse leaves
 		if (this.mouseEnterTimer) {
 			clearTimeout(this.mouseEnterTimer);
 			this.mouseEnterTimer = null;
@@ -831,9 +815,6 @@ export class Danmaku {
 
 	private createHoverPopup(): HTMLElement {
 		if (this.hoverPopup) return this.hoverPopup;
-		// if (getComputedStyle(this.container).position === 'static') {
-		// 	this.container.style.position = 'relative';
-		// }
 		const popup = document.createElement('div');
 		popup.className = 'danmaku-popup';
 		const copyBtn = document.createElement('button');
@@ -852,21 +833,11 @@ export class Danmaku {
 		reportBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
 		reportBtn.addEventListener('click', () => {
 			if (this.hoverPopupActiveComment) {
-				// Handle report action
 			}
 		});
 		popup.appendChild(reportBtn);
-		// popup.querySelectorAll<SVGElement>('svg').forEach(svg => {
-		// 	svg.setAttribute('width', '16');
-		// 	svg.setAttribute('height', '16');
-		// 	svg.setAttribute('viewBox', '0 0 24 24');
-		// 	if (!svg.innerHTML.trim()) {
-		// 		svg.innerHTML = '<rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" />';
-		// 	}
-		// });
 		popup.addEventListener('mouseleave', this.handlePopupMouseLeave);
 		this.container.appendChild(popup);
-		// this.hoverPopup = popup;
 		return popup;
 	}
 
