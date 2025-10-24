@@ -3,17 +3,11 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    /*margin-top: 3rem;*/
-    /*margin-bottom: 3rem;*/
     background: var(--yt-spec-base-background);
     border: 1px solid var(--yt-spec-10-percent-layer);
     border-radius: 18px;
-    padding: 8px 12px;
 }
 
-/* .danmaku-controls-container {
-    margin-left: 12px;
-} */
 
 .danmaku-toggle-button,
 .danmaku-style-button,
@@ -140,26 +134,19 @@
 }
 
 .danmaku-comment-button {
-    background: var(
-        --yt-spec-call-to-action,
-        var(--yt-spec-themed-blue, #3ea6ff)
-    );
+    background: var(--yt-spec-call-to-action,
+            var(--yt-spec-themed-blue, #3ea6ff));
     color: var(--yt-spec-text-primary-inverse, #fff);
-    border-radius: 0 12px 12px 0;
 }
 
 .danmaku-comment-button:hover {
-    background-color: var(
-        --yt-spec-call-to-action-hover,
-        var(--yt-spec-themed-blue, #3ea6ff)
-    );
+    background-color: var(--yt-spec-call-to-action-hover,
+            var(--yt-spec-themed-blue, #3ea6ff));
 }
 
 .danmaku-comment-button:active {
-    background-color: var(
-        --yt-spec-call-to-action-active,
-        var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4))
-    );
+    background-color: var(--yt-spec-call-to-action-active,
+            var(--yt-spec-call-to-action, var(--yt-spec-themed-blue, #065fd4)));
 }
 
 .danmaku-modal-content {
@@ -191,7 +178,6 @@
 }
 
 .danmaku-comment-popup {
-    /* REMOVED: bottom and left. These are functional properties set by JavaScript. */
     background: var(--yt-spec-raised-background);
     border: 1px solid var(--yt-spec-10-percent-layer);
     border-radius: 8px;
@@ -222,7 +208,6 @@
     border-color: var(--yt-spec-call-to-action);
 }
 
-/* Report modal specific styling for YouTube */
 .danmaku-report-form {
     color: var(--yt-spec-text-primary);
 }
@@ -270,4 +255,80 @@
 
 .danmaku-char-limit {
     color: var(--yt-spec-text-secondary);
+}
+
+.ytp-chrome-controls:has(.danmaku-input-container) .ytp-left-controls {
+    flex: none !important;
+}
+
+.ytp-fullscreen-grid-expand-button {
+    display: none !important;
+}
+
+.danmaku-input-fullscreen.danmaku-input-container {
+    flex-direction: row !important;
+    align-items: center !important;
+    height: var(--yt-delhi-pill-height, 48px);
+    border-radius: 28px;
+    background: rgba(0, 0, 0, 0.7) !important;
+}
+
+.danmaku-input-fullscreen.danmaku-input-container:not(.visible) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.danmaku-input-fullscreen.danmaku-input-container.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+.danmaku-input-fullscreen .danmaku-input-area {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    margin: 0 !important;
+    height: var(--yt-delhi-pill-height, 48px);
+}
+
+
+.danmaku-input-fullscreen .danmaku-input {
+    font-size: 14px !important;
+    padding: 4px 8px !important;
+}
+
+
+
+.danmaku-input-container:is(.danmaku-input-fullscreen) .danmaku-comment-button {
+    border-radius: 0px 28px 28px 0px;
+}
+
+.danmaku-input-fullscreen .danmaku-toggle-button,
+.danmaku-input-fullscreen .danmaku-style-button,
+.danmaku-input-fullscreen .danmaku-settings-button {
+    display: none !important;
+}
+
+.danmaku-input-fullscreen .danmaku-style-menu,
+.danmaku-input-fullscreen .danmaku-settings-menu {
+    position: fixed !important;
+    bottom: 60px !important;
+}
+
+.danmaku-input-fullscreen .danmaku-login-prompt {
+    font-size: 12px !important;
+    padding: 0 4px !important;
+}
+
+.danmaku-input-fullscreen .danmaku-login-prompt .text {
+    font-size: 12px !important;
+}
+
+.danmaku-input-fullscreen .danmaku-error-message {
+    font-size: 11px !important;
+    padding: 0 4px !important;
 }

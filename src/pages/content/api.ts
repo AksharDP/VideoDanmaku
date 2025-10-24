@@ -1,6 +1,6 @@
 import packageJson from "../../../package.json";
 import { FontSize, ScrollMode } from "./interfaces/enum";
-import { ApiRawComment, RawComment, PlannedComment, DisplayPlan } from "./interfaces/danmaku";
+import { RawComment } from "./interfaces/danmaku";
 
 const API_BASE_URL = packageJson.API_BASE_URL;
 
@@ -21,7 +21,7 @@ export interface Comment {
     userId: number;
     scrollMode: ScrollMode;
     fontSize: FontSize;
-    likes?: number; // Added for backend prioritization
+    likes?: number;
 }
 
 export interface LoginRequest {
@@ -111,6 +111,8 @@ export async function getComments(platform: string, videoId: string, limit: numb
         return null;
     } catch (error) {
         console.error("Failed to fetch and plan display:", error);
+        console.debug("Failed to fetch and plan display:", { platform, videoId });
+        console.debug(window.location.href);
         return null;
     }
 }

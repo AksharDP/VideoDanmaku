@@ -1,7 +1,4 @@
-.danmaku-input-overlay-container {
-    position: relative;
-    flex-grow: 1;
-}
+
 
 .danmaku-login-prompt-overlay {
     position: absolute;

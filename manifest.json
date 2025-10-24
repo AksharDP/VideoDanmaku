@@ -12,20 +12,23 @@
 	},
 	"permissions": [
 		"activeTab",
-		"storage"
+		"storage",
+		"scripting"
 	],
 	"content_scripts": [
 		{
 			"matches": [
 				"https://www.youtube.com/*",
-				"https://www.crunchyroll.com/watch/*"
+				"https://www.crunchyroll.com/*",
+				"https://static.crunchyroll.com/*"
 			],
 			"js": [
 				"src/pages/content/index.tsx"
 			],
 			"css": [
 				"contentStyle.css"
-			]
+			],
+			"all_frames": true
 		}
 	],
 	"web_accessible_resources": [
@@ -38,7 +41,8 @@
 			],
 			"matches": [
 				"https://www.youtube.com/*",
-				"https://www.crunchyroll.com/*"
+				"https://www.crunchyroll.com/*",
+				"https://static.crunchyroll.com/*"
 			]
 		}
 	]

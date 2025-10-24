@@ -3,8 +3,10 @@ import { Danmaku } from "./danmaku";
 import { LoginModal } from "../modal-login/modal-login";
 import danmakuHtml from "./danmakuInput.html?raw";
 import { DensityMap, DensityMode, FontSize, ScrollMode } from "../interfaces/enum";
+import { SiteAdapter } from "../interfaces/SiteAdapter";
 
 export class DanmakuInput {
+    private siteAdapter: SiteAdapter;
     private danmaku: Danmaku;
     private loginModal: LoginModal;
     private videoId: string;
@@ -45,24 +47,39 @@ export class DanmakuInput {
     private fontSizePercent = 100;
     private readonly MAX_CHARS = 350;
 
-    constructor(danmaku: Danmaku, loginModal: LoginModal, videoId: string) {
+    constructor(siteAdapter: SiteAdapter, danmaku: Danmaku, loginModal: LoginModal, videoId: string) {
+        this.siteAdapter = siteAdapter;
         this.danmaku = danmaku;
         this.loginModal = loginModal;
         this.videoId = videoId;
-        this.container = document.createElement("div");
-        chrome.storage.onChanged.addListener((changes, area) => {
-            if (area === "local" && changes.authToken) {
-                this.updateUIBasedOnAuth();
+        this.container = (() => {
+            const template = document.createElement('template');
+            template.innerHTML = danmakuHtml.trim();
+            return template.content.firstElementChild as HTMLElement;
+        })();
+
+        // FIX: Check if chrome and chrome.storage are available before accessing
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+            try {
+                chrome.storage.onChanged.addListener((changes, area) => {
+                    if (area === "local" && changes.authToken) {
+                        this.updateUIBasedOnAuth();
+                    }
+                    if (area === "local" && changes.danmakuEnabled) {
+                        this.updateToggleButton(changes.danmakuEnabled.newValue);
+                        this.updateCommentsStatus(changes.danmakuEnabled.newValue, this.danmaku.getCommentsCount);
+                    }
+                });
+            } catch (error) {
+                console.warn("[DanmakuInput] Could not set up storage listener:", error);
             }
-            if (area === 'local' && changes.danmakuEnabled) {
-                this.updateToggleButton(changes.danmakuEnabled.newValue);
-                this.updateCommentsStatus(changes.danmakuEnabled.newValue, this.danmaku.getCommentsCount);
-            }
-        });
+        } else {
+            console.warn("[DanmakuInput] Chrome storage API not available");
+        }
     }
 
     public init(): HTMLElement {
-        this.container.innerHTML = danmakuHtml;
+        // this.container.innerHTML = danmakuHtml;
 
         this.inputField = this.container.querySelector("#danmaku-input-field")!;
         this.commentButton = this.container.querySelector(
@@ -146,8 +163,7 @@ export class DanmakuInput {
 
     public updateCommentsCount(count: number): void {
         if (this.commentsLoadedElement) {
-            this.commentsLoadedElement.textContent = `${count} comment${
-                count === 1 ? "" : "s"
+            this.commentsLoadedElement.textContent = `${count} comment${count === 1 ? "" : "s"
                 } loaded`;
         } else {
             console.error(
@@ -160,8 +176,7 @@ export class DanmakuInput {
         if (this.commentsLoadedElement) {
             if (isEnabled) {
                 if (commentsCount > 0) {
-                    this.commentsLoadedElement.textContent = `${commentsCount} comment${
-                        commentsCount === 1 ? "" : "s"
+                    this.commentsLoadedElement.textContent = `${commentsCount} comment${commentsCount === 1 ? "" : "s"
                         } loaded`;
                 } else {
                     this.commentsLoadedElement.textContent = "Loading comments...";
@@ -187,6 +202,8 @@ export class DanmakuInput {
         this.loginPrompt.addEventListener("click", () => this.openLoginPage());
         this.inputField.addEventListener("input", () => this.handleInput());
         this.inputField.addEventListener("keydown", (event) => {
+            // Stop propagation to prevent video player from capturing keystrokes
+            event.stopPropagation();
             this.clearError();
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -194,6 +211,17 @@ export class DanmakuInput {
                     this.submitComment();
                 }
             }
+        });
+
+        // Prevent keystrokes on the entire container from reaching the video player
+        this.container.addEventListener("keydown", (event) => {
+            event.stopPropagation();
+        });
+        this.container.addEventListener("keyup", (event) => {
+            event.stopPropagation();
+        });
+        this.container.addEventListener("keypress", (event) => {
+            event.stopPropagation();
         })
 
         this.styleButton.addEventListener("click", (e) => {
@@ -404,7 +432,7 @@ export class DanmakuInput {
         const charCount = this.inputField.value.length;
         this.charCountContainer.style.display =
             document.activeElement === this.inputField || charCount > 0
-                ? "block"
+                ? "flex"
                 : "none";
 
         if (this.currentCharCount) {
@@ -440,25 +468,26 @@ export class DanmakuInput {
             this.showError("Video ID not found.");
             return;
         }
-        const currentTime = this.danmaku.videoPlayer.currentTime * 1000;
+        const currentTime = await this.siteAdapter.getCurrentTime();
         if (currentTime < 0) {
             this.showError("Video is not playing.");
             return;
         }
-        
+
         const hexColorRegex = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
         if (!hexColorRegex.test(this.selectedColor)) {
             this.showError("Invalid color selected.");
             return;
         }
-        
+
         if (!Object.values(ScrollMode).includes(this.selectedPosition)) {
             this.showError("Invalid position selected.");
             return;
         }
-        
+
         const response: PostCommentResponse = await postComment(
-            "youtube",
+            // "youtube",
+            this.siteAdapter.domain,
             this.videoId,
             currentTime,
             content,
@@ -492,7 +521,7 @@ export class DanmakuInput {
     }
 
     private showError(message: string = "An unexpected error occurred.", status?: number) {
-        this.errorMessageElement.textContent = `Error ${status ? `${status} `: ''}: ${message}`;
+        this.errorMessageElement.textContent = `Error ${status ? `${status} ` : ''}: ${message}`;
         this.errorMessageElement.style.display = "block";
     }
 
@@ -539,7 +568,7 @@ export class DanmakuInput {
 
             this.updateSelectedDensityUI(this.selectedDensity);
             this.danmaku.setDensity(this.selectedDensity);
-            
+
             this.speedSlider.value = this.speedPercent.toString();
             this.speedValue.value = this.speedPercent.toString();
             this.danmaku.setSpeed(this.speedPercent);

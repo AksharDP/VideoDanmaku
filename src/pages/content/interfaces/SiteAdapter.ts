@@ -1,15 +1,20 @@
-import {Danmaku} from "../danmaku/danmaku";
 
 export interface SiteAdapter {
-    getVideoPlayer(): HTMLVideoElement;
+    domain: string;
+    // getVideoPlayer(): HTMLVideoElement;
 
     getVideoId(url: string): string | null;
 
     isVideoPage(url: string): boolean;
 
-    setupEventListeners(videoPlayer: HTMLVideoElement, danmaku: Danmaku): Promise<void>;
-
     initializeDanmaku(): Promise<void>;
+
+    /**
+     * Get the current video time in milliseconds.
+     * For iframe-based sites, this may query the iframe asynchronously.
+     * For direct video access, this returns immediately.
+     */
+    getCurrentTime(): Promise<number>;
 
     destroy(): void;
 }

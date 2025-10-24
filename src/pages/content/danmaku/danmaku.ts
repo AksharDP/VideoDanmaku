@@ -1,5 +1,5 @@
 import { Comment } from "../api";
-import { RawComment, PlannedComment } from "../interfaces/danmaku";
+import { RawComment } from "../interfaces/danmaku";
 import { ReportModal } from "../modal-report/modal-report";
 import { DensityMode, DensityMap, ScrollMode, FontSize } from "../interfaces/enum";
 
@@ -9,7 +9,7 @@ export class Danmaku {
 
 	public videoPlayer: HTMLVideoElement;
 	private container: HTMLElement;
-	private controls: HTMLElement;
+	// private controls: HTMLElement;
 	private reportModal: ReportModal = new ReportModal();
 	private comments: RawComment[] = [];
 
@@ -39,17 +39,17 @@ export class Danmaku {
 	private hoverPopup: HTMLElement | null = null;
 	private hoverPopupActiveComment: HTMLElement | null = null;
 	private mouseEnterTimer: number | null = null;
-	private readonly hoverPopupGap = 8;
+	// private readonly hoverPopupGap = 8;
 
 	private commentPool: HTMLElement[] = [];
 	private readonly maxPoolSize: number = 150;
 
 	private activeAnimations: Map<HTMLElement, Animation> = new Map();
 
-	constructor(videoPlayer: HTMLVideoElement, container: HTMLElement, controls: HTMLElement) {
+	constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
 		this.videoPlayer = videoPlayer;
 		this.container = container;
-		this.controls = controls;
+		// this.controls = controls;
 		this.addVideoEventListeners();
 		this.calculateLanes();
 		this.localSlidingLanes = new Array(this.localLaneCount).fill(null);
@@ -261,7 +261,15 @@ export class Danmaku {
 	* The main loop, called on videoPlayer's 'timeupdate' event.
 	*/
 	private emitNewComments(): void {
+		console.log("emitNewComments called");
+		if (this.videoPlayer.readyState < 3) {
+			console.log("Video not ready, pausing danmaku. " + this.videoPlayer.readyState);
+			this.pause();
+			return;
+		}
+		console.log(`Current time: ${this.videoPlayer.currentTime}, nextEmitIndex: ${this.nextEmitIndex}, total comments: ${this.getCommentsCount}`);
 		if (!this.isRunning || !this.isVisible) return;
+		console.log("Danmaku is running and visible, proceeding to emit comments.");
 
 		const currentTime = this.videoPlayer.currentTime * 1000;
 		while (this.nextEmitIndex < this.getCommentsCount && this.comments[this.nextEmitIndex].time <= currentTime) {
@@ -714,7 +722,9 @@ export class Danmaku {
 	private addVideoEventListeners(): void {
 		this.videoPlayer.addEventListener('timeupdate', this.emitNewComments.bind(this));
 		this.videoPlayer.addEventListener('play', this.play.bind(this));
+		// this.videoPlayer.addEventListener('playing', this.play.bind(this));
 		this.videoPlayer.addEventListener('pause', this.pause.bind(this));
+		// this.videoPlayer.addEventListener('waiting', this.pause.bind(this));
 		this.videoPlayer.addEventListener('seeked', this.syncCommentQueue.bind(this));
 
 		const resizeObserver = new ResizeObserver(() => {

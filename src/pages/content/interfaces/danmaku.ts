@@ -1,62 +1,67 @@
 import { ScrollMode, FontSize } from "./enum";
 
 /**
- * Represents a raw comment structure from API response, as it would be stored in database.
- * Contains fields from the API JSON.
- */
-export interface ApiRawComment extends RawComment {
-    user_id: number; // Alias for userId
-    video_id: number;
-    created_at: string;
-    like_score: string; // Note: string in JSON, convert to number if needed
-}
-
-/**
  * Represents a raw comment structure, as it would be stored in your database.
  * The backend will use this, along with other data like 'likes', to generate the plan.
  */
 export interface RawComment {
     id: number;
     content: string;
-    time: number; // The original timestamp in seconds from API, convert to ms
+    time: number;
     color: string;
     userId: number;
     scrollMode: ScrollMode;
     fontSize: FontSize;
-    likes?: number; // Optional: for backend prioritization
+    likes?: number;
 }
 
-
-/**
- * Represents a comment after it has been processed by the offline algorithm.
- * It contains all the necessary information for the client to render it without
- * any further calculation.
- */
-export interface PlannedComment {
-    id: number;
-    content: string;
-    time: number; // The exact, final emission timestamp (in ms) after temporal spreading
-    color: string;
-    userId: number;
-    scrollMode: ScrollMode;
-    fontSize: FontSize;
-
-    // --- Pre-calculated layout properties ---
-    lane: number;          // The vertical lane this comment will appear in
-    duration: number;      // The time (in ms) it will take to cross the screen
-    width: number;         // The pre-calculated width of the comment text in pixels
+// Message from main page to iframe with page status
+export interface PageStatusMessage {
+  type: 'PAGE_STATUS';
+  videoId: string | null;
+  isVideoPage: boolean;
+  timestamp: number;
 }
 
-/**
- * The complete, pre-processed layout plan for a single video.
- * This is the data structure the client will fetch from the API.
- */
-export interface DisplayPlan {
-    comments: PlannedComment[];
-    // // Optional metadata about the plan
-    // metadata: {
-    //     totalComments: number;
-    //     culledComments: number; // Number of comments dropped due to density
-    //     processingTime: number; // Time taken to generate the plan
-    // };
+// Message from iframe to main page indicating readiness
+export interface IframeReadyMessage {
+  type: 'IFRAME_READY';
+  timestamp: number;
+}
+
+// Message from iframe to main page with danmaku status
+export interface DanmakuStatusMessage {
+  type: 'DANMAKU_STATUS';
+  commentsEnabled: boolean;
+  commentsCount: number;
+  timestamp: number;
+}
+
+// Message from main page to iframe to add a new comment
+export interface AddCommentMessage {
+  type: 'ADD_COMMENT';
+  comment: RawComment;
+  timestamp: number;
+}
+
+// Message from main page to iframe to toggle visibility
+export interface ToggleVisibilityMessage {
+  type: 'TOGGLE_VISIBILITY';
+  force?: boolean;
+  timestamp: number;
+}
+
+// Message from main page to iframe to request current time
+export interface GetCurrentTimeMessage {
+  type: 'GET_CURRENT_TIME';
+  requestId: number;
+  timestamp: number;
+}
+
+// Message from iframe to main page with current time response
+export interface CurrentTimeResponseMessage {
+  type: 'CURRENT_TIME_RESPONSE';
+  requestId: number;
+  currentTime: number;
+  timestamp: number;
 }

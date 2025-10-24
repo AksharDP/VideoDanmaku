@@ -2,11 +2,23 @@
     font-family: Roboto, Arial, sans-serif;
 }
 
+/* .danmaku-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+
+}
+
+*/
 .danmaku-container {
     width: 100%;
     height: 100%;
-    position: relative;   /* anchor absolute children */
-    overflow: hidden;     /* clip sliding comments to container */
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 .danmaku-comment {
@@ -19,7 +31,7 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     z-index: 20;
     line-height: 1;
-    will-change: transform; /* Hint to the browser for optimization */
+    will-change: transform;
 }
 
 /* Base animation properties */
@@ -35,15 +47,13 @@
 }
 
 .iridescent-effect-3 {
-    background: radial-gradient(
-        circle at 20% 80%,
-        #e6e6fa 5%,
-        #add8e6 15%,
-        #90ee90 25%,
-        #ffe4e1 35%,
-        #d8bfd8 45%,
-        #e6e6fa 55%
-    );
+    background: radial-gradient(circle at 20% 80%,
+            #e6e6fa 5%,
+            #add8e6 15%,
+            #90ee90 25%,
+            #ffe4e1 35%,
+            #d8bfd8 45%,
+            #e6e6fa 55%);
     background-size: 200% 200%;
     animation: moveGradient 5s infinite alternate;
     -webkit-background-clip: text;
@@ -56,6 +66,7 @@
     0% {
         background-position: 0 0;
     }
+
     100% {
         background-position: 100% 100%;
     }
@@ -80,6 +91,7 @@
     0% {
         background-position: 0 0;
     }
+
     100% {
         background-position: 100% 100%;
     }
@@ -95,6 +107,7 @@
     z-index: 999;
     gap: 5px;
     transform: translateX(-50%);
+    pointer-events: auto;
 }
 
 .danmaku-popup-button {

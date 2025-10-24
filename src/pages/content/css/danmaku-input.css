@@ -16,16 +16,18 @@
 }
 
 .danmaku-input-container {
-    position: relative;
     display: flex;
-    flex-direction: column;
+    flex: 1;
     gap: 0;
-    margin-top: 2rem;
-    margin-bottom: 2rem;
+    
     background: rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     padding: 8px 12px;
+}
+
+.danmaku-input-fullscreen.danmaku-input-container {
+    padding: 8px 0px 8px 12px;
 }
 
 .danmaku-controls-container {
@@ -233,9 +235,10 @@
     align-items: center;
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 0;
 }
 
-.danmaku-input-wrapper:focus-within {
+.danmaku-input-area:focus-within .danmaku-input-wrapper {
     border-bottom-color: transparent;
 }
 
@@ -245,7 +248,7 @@
     border: none;
     background: transparent;
     color: #fff;
-    flex: 1;
+    flex-grow: 1;
     min-width: 0;
 }
 
@@ -254,19 +257,33 @@
 }
 
 .danmaku-char-count {
-    font-size: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 8px;
     color: rgba(255, 255, 255, 0.7);
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .danmaku-comments-count {
-    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    padding: 0 8px;
     font-size: 12px;
     color: rgba(255, 255, 255, 0.7);
     white-space: nowrap;
     background: transparent;
     border: none;
     opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.danmaku-input-container.danmaku-input-fullscreen .danmaku-comments-count {
+    display: none !important;
 }
 
 .danmaku-login-prompt {
@@ -292,16 +309,13 @@
     background: #3ea6ff;
     color: #fff;
     border: none;
-    border-radius: 0;
-    padding: 6px 12px;
     cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-.danmaku-comment-button {
-    background: #007bff;
-    color: #fff;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-radius: 0px 12px 12px 0px;
 }
 
 .danmaku-comment-button:hover {
@@ -498,16 +512,15 @@
     justify-content: center;
     align-items: center;
     gap: 4px;
-    /* This ensures the container itself doesn't stretch */
     flex-shrink: 0;
 }
 
 .slider-labels > span {
-    flex: 1; /* Allows the labels to grow and fill available space */
+    flex: 1;
 }
 
 .slider-labels > span:last-of-type {
-    text-align: right; /* Aligns "200%" to the right */
+    text-align: right;
 }
 
 .slider-current-value {
@@ -519,7 +532,7 @@
     color: #fff;
     text-align: center;
     appearance: textfield;
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
 }
 
 .slider-current-value::-webkit-outer-spin-button,
