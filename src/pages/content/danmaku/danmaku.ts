@@ -9,7 +9,6 @@ export class Danmaku {
 
 	public videoPlayer: HTMLVideoElement;
 	private container: HTMLElement;
-	// private controls: HTMLElement;
 	private reportModal: ReportModal = new ReportModal();
 	private comments: RawComment[] = [];
 
@@ -39,17 +38,22 @@ export class Danmaku {
 	private hoverPopup: HTMLElement | null = null;
 	private hoverPopupActiveComment: HTMLElement | null = null;
 	private mouseEnterTimer: number | null = null;
-	// private readonly hoverPopupGap = 8;
 
 	private commentPool: HTMLElement[] = [];
 	private readonly maxPoolSize: number = 150;
 
 	private activeAnimations: Map<HTMLElement, Animation> = new Map();
 
+	// Performance optimization: throttle resize observations
+	private resizeObserver: ResizeObserver | null = null;
+	private resizeTimeout: number | null = null;
+
+	// AbortController for event cleanup
+	private abortController: AbortController = new AbortController();
+
 	constructor(videoPlayer: HTMLVideoElement, container: HTMLElement) {
 		this.videoPlayer = videoPlayer;
 		this.container = container;
-		// this.controls = controls;
 		this.addVideoEventListeners();
 		this.calculateLanes();
 		this.localSlidingLanes = new Array(this.localLaneCount).fill(null);
@@ -260,16 +264,14 @@ export class Danmaku {
 	/**
 	* The main loop, called on videoPlayer's 'timeupdate' event.
 	*/
-	private emitNewComments(): void {
-		console.log("emitNewComments called");
+	private emitNewComments = (): void => {
 		if (this.videoPlayer.readyState < 3) {
-			console.log("Video not ready, pausing danmaku. " + this.videoPlayer.readyState);
+			this.debugLog("Video not ready, pausing danmaku.", this.videoPlayer.readyState);
 			this.pause();
 			return;
 		}
-		console.log(`Current time: ${this.videoPlayer.currentTime}, nextEmitIndex: ${this.nextEmitIndex}, total comments: ${this.getCommentsCount}`);
+
 		if (!this.isRunning || !this.isVisible) return;
-		console.log("Danmaku is running and visible, proceeding to emit comments.");
 
 		const currentTime = this.videoPlayer.currentTime * 1000;
 		while (this.nextEmitIndex < this.getCommentsCount && this.comments[this.nextEmitIndex].time <= currentTime) {
@@ -277,7 +279,7 @@ export class Danmaku {
 			this.emitComment(commentToEmit, false);
 			this.nextEmitIndex++;
 		}
-	}
+	};
 
 	private emitComment(comment: RawComment, isResync: boolean): void {
 		this.debugLog(`Emitting comment: ${comment.content}, mode: ${comment.scrollMode}, isResync: ${isResync}`);
@@ -417,7 +419,7 @@ export class Danmaku {
 		el.textContent = comment.content;
 		el.style.color = comment.color;
 		el.style.fontSize = `${24 * this.fontSizeMultiplier}px`;
-		el.style.opacity = this.opacityLevel.toString();
+		// el.style.opacity = this.opacityLevel.toString();
 		el.dataset.commentId = comment.id.toString();
 		el.dataset.emissionTime = comment.time.toString();
 
@@ -507,14 +509,37 @@ export class Danmaku {
 		this.pause();
 		this.clearCurrentComments();
 		this.comments = [];
+
+		// Clear pool
+		this.commentPool.forEach(el => {
+			el.removeEventListener('mouseenter', this.handleCommentMouseEnter);
+			el.removeEventListener('mouseleave', this.handleCommentMouseLeave);
+		});
 		this.commentPool = [];
+
 		this.activeAnimations.forEach(animation => animation.cancel());
 		this.activeAnimations.clear();
 		this.hideHoverPopup(true);
 		this.measurementCache.clear();
 		this.slidingLaneElements.clear();
-	}
 
+		// Cleanup resize observer
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+
+		if (this.resizeTimeout) {
+			clearTimeout(this.resizeTimeout);
+			this.resizeTimeout = null;
+		}
+
+		// Cleanup abort controller
+		this.abortController.abort();
+
+		// Cleanup canvas context
+		this.tempCanvasContext = null;
+	}
 
 	private clearCurrentComments(): void {
 		while (this.container.firstChild) {
@@ -546,7 +571,12 @@ export class Danmaku {
 
 	public setOpacity(percent: number): void {
 		this.opacityLevel = percent / 100;
-		this.container.style.opacity = this.opacityLevel.toString();
+		// this.container.style.opacity = this.opacityLevel.toString();
+		if (this.opacityLevel >= 0.99) {
+			this.container.style.removeProperty('filter');
+		} else {
+			this.container.style.filter = `opacity(${this.opacityLevel})`;
+		}
 	}
 
 
@@ -720,19 +750,25 @@ export class Danmaku {
 
 
 	private addVideoEventListeners(): void {
-		this.videoPlayer.addEventListener('timeupdate', this.emitNewComments.bind(this));
-		this.videoPlayer.addEventListener('play', this.play.bind(this));
-		// this.videoPlayer.addEventListener('playing', this.play.bind(this));
-		this.videoPlayer.addEventListener('pause', this.pause.bind(this));
-		// this.videoPlayer.addEventListener('waiting', this.pause.bind(this));
-		this.videoPlayer.addEventListener('seeked', this.syncCommentQueue.bind(this));
+		const signal = this.abortController.signal;
 
-		const resizeObserver = new ResizeObserver(() => {
-			this.cacheContainerMetrics();
-			this.calculateLanes();
+		this.videoPlayer.addEventListener('timeupdate', this.emitNewComments, { signal });
+		this.videoPlayer.addEventListener('play', () => this.play(), { signal });
+		this.videoPlayer.addEventListener('pause', () => this.pause(), { signal });
+		this.videoPlayer.addEventListener('seeked', () => this.syncCommentQueue(), { signal });
+
+		// Throttled resize observer
+		this.resizeObserver = new ResizeObserver(() => {
+			if (this.resizeTimeout) {
+				clearTimeout(this.resizeTimeout);
+			}
+			this.resizeTimeout = window.setTimeout(() => {
+				this.cacheContainerMetrics();
+				this.calculateLanes();
+			}, 150);
 		});
 
-		resizeObserver.observe(this.container);
+		this.resizeObserver.observe(this.container);
 		this.debugLog("Added container resize observer.");
 	}
 

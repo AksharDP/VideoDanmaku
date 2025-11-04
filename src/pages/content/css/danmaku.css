@@ -19,6 +19,7 @@
     left: 0;
     overflow: hidden;
     pointer-events: none;
+    z-index: 20;
 }
 
 .danmaku-comment {

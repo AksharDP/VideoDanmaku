@@ -11,7 +11,7 @@ export class DanmakuInput {
     private loginModal: LoginModal;
     private videoId: string;
 
-    private container: HTMLElement;
+    private container: HTMLElement | null;
     private inputField!: HTMLInputElement;
     private commentButton!: HTMLButtonElement;
     private loginPrompt!: HTMLElement;
@@ -79,7 +79,9 @@ export class DanmakuInput {
     }
 
     public init(): HTMLElement {
-        // this.container.innerHTML = danmakuHtml;
+        if (!this.container) {
+            throw new Error("DanmakuInput: Container is not initialized");
+        }
 
         this.inputField = this.container.querySelector("#danmaku-input-field")!;
         this.commentButton = this.container.querySelector(
@@ -158,7 +160,22 @@ export class DanmakuInput {
     }
 
     public get containerDiv(): HTMLElement {
+        if (!this.container) {
+            throw new Error("DanmakuInput: Container is not initialized");
+        }
         return this.container;
+    }
+
+    public getContainer(): HTMLElement | null {
+        return this.container;
+    }
+    
+    public destroy(): void {
+        // Cleanup logic if needed
+        if (this.container) {
+            this.container.remove();
+            this.container = null;
+        }
     }
 
     public updateCommentsCount(count: number): void {
@@ -179,7 +196,7 @@ export class DanmakuInput {
                     this.commentsLoadedElement.textContent = `${commentsCount} comment${commentsCount === 1 ? "" : "s"
                         } loaded`;
                 } else {
-                    this.commentsLoadedElement.textContent = "Loading comments...";
+                    this.commentsLoadedElement.textContent = "0 comments loaded";
                 }
             } else {
                 this.commentsLoadedElement.textContent = "Comments disabled";
@@ -193,6 +210,23 @@ export class DanmakuInput {
 
     public updateVideoId(newVideoId: string): void {
         this.videoId = newVideoId;
+    }
+
+    public getInputText(): string {
+        return this.inputField?.value ?? '';
+    }
+
+    public setInputText(text: string): void {
+        if (this.inputField) {
+            this.inputField.value = text;
+            this.handleInput();
+        }
+    }
+
+    public focusInput(): void {
+        if (this.inputField) {
+            this.inputField.focus();
+        }
     }
 
     private setupEventListeners() {
@@ -214,13 +248,13 @@ export class DanmakuInput {
         });
 
         // Prevent keystrokes on the entire container from reaching the video player
-        this.container.addEventListener("keydown", (event) => {
+        this.container?.addEventListener("keydown", (event) => {
             event.stopPropagation();
         });
-        this.container.addEventListener("keyup", (event) => {
+        this.container?.addEventListener("keyup", (event) => {
             event.stopPropagation();
         });
-        this.container.addEventListener("keypress", (event) => {
+        this.container?.addEventListener("keypress", (event) => {
             event.stopPropagation();
         })
 
@@ -430,10 +464,7 @@ export class DanmakuInput {
         this.clearError();
 
         const charCount = this.inputField.value.length;
-        this.charCountContainer.style.display =
-            document.activeElement === this.inputField || charCount > 0
-                ? "flex"
-                : "none";
+        this.charCountContainer.style.display = charCount > 0 ? "flex" : "none";
 
         if (this.currentCharCount) {
             this.currentCharCount.textContent = charCount.toString();

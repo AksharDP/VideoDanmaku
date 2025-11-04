@@ -1,4 +1,4 @@
-import { ScrollMode, FontSize } from "./enum";
+import { ScrollMode, FontSize, DensityMode } from "./enum";
 
 /**
  * Represents a raw comment structure, as it would be stored in your database.
@@ -58,10 +58,35 @@ export interface GetCurrentTimeMessage {
   timestamp: number;
 }
 
-// Message from iframe to main page with current time response
-export interface CurrentTimeResponseMessage {
-  type: 'CURRENT_TIME_RESPONSE';
-  requestId: number;
-  currentTime: number;
+export interface SetSpeedMessage {
+  type: 'SET_SPEED';
+  speed: number;
   timestamp: number;
 }
+
+export interface SetDensityMessage {
+  type: 'SET_DENSITY';
+  density: DensityMode;
+  timestamp: number;
+}
+
+export interface SetOpacityMessage {
+  type: 'SET_OPACITY';
+  opacity: number;
+  timestamp: number;
+}
+
+export interface SetFontSizeMessage {
+  type: 'SET_FONT_SIZE';
+  fontSize: number;
+  timestamp: number;
+}
+
+// // Message from iframe to main page with current time response
+// export interface CurrentTimeResponseMessage {
+//   type: 'CURRENT_TIME_RESPONSE';
+//   requestId: number;
+//   currentTime: number;
+//   duration: number;
+//   timestamp: number;
+// }

@@ -1,3 +1,6 @@
+/* div:has([data-testid="vilos-volume_container"]) {
+    flex: 0;
+} */
 
 .danmaku-input-container {
     position: relative;
